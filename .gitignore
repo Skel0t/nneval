@@ -1,0 +1,30 @@
+# Directories
+.vscode/
+build/
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Configuration file
+*.conf
+
+# Image files
+*.png
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app

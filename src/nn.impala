@@ -1,0 +1,7 @@
+extern fn hello_world() -> () {
+    
+}
+
+extern fn get_42() -> int {
+    42
+}
