@@ -2,6 +2,9 @@ set(IMP_SRCS
     nn.impala
     image.impala
     matrix.impala
+    interface.impala
+    output.impala
+    iterate.impala
 )
 
 set(NN_SRCS

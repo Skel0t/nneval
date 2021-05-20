@@ -22,6 +22,6 @@ int main() {
     anydsl_copy(0, arr2, 0, 0, dslarr2.data(), 0, 9 * sizeof(int));
     anydsl_copy(0, arr3, 0, 0, dslarr3.data(), 0, 9 * sizeof(float));
 
-    mat_test(&dslarr1, &dslarr2, &dslarr3);
+    sparse_mult_test(&dslarr1, &dslarr2, &dslarr3);
     return 0;
 }

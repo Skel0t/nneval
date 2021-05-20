@@ -9,7 +9,7 @@ extern "C" {
 
 void hello_world(void);
 int get_42(void);
-void mat_test(anydsl::Array<float>*, anydsl::Array<int>*, anydsl::Array<float>*);
+void sparse_mult_test(anydsl::Array<float>*, anydsl::Array<int>*, anydsl::Array<float>*);
 
 #ifdef __cplusplus
 }

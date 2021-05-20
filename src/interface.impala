@@ -1,0 +1,13 @@
+extern fn sparse_mult_test(cnt: &Buffer, idz: &Buffer, buf: &Buffer) -> () {
+    let m = make_sparse(*cnt, *idz, 2, 2);
+    let n = make_matrix(*buf, 3, 3);
+
+    print_sparse_content(m);print_string("\n");
+    print_sparse_indizes(m);print_string("\n");
+
+    print_matrix(n);print_string("\n");
+
+    let x = sparse_mult(m, n);
+
+    print_matrix(x);
+}

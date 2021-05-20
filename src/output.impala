@@ -1,0 +1,26 @@
+fn @print_matrix(mat: Matrix) -> () {
+    for val, _r, c in iterate_matrix(mat) {
+        print_f32(val); print_string("\t");
+        if c == mat.cols - 1 {
+            print_string("\n");
+        }
+    }
+}
+
+fn @print_sparse_content(mat: Sparse) -> () {
+    for val, _i, _r, c in iterate_sparse(mat) {
+        print_f32(val); print_string("\t");
+        if c == mat.cols - 1 {
+            print_string("\n");
+        }
+    }
+}
+
+fn @print_sparse_indizes(mat: Sparse) -> () {
+    for _val, i, _r, c in iterate_sparse(mat) {
+        print_i32(i); print_string("\t");
+        if c == mat.cols - 1 {
+            print_string("\n");
+        }
+    }
+}
