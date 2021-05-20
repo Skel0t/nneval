@@ -1,0 +1,176 @@
+struct Matrix {
+    buf : Buffer,
+    rows : i32,
+    cols : i32
+}
+
+struct Sparse {
+    content : Buffer,
+    indizes : Buffer,
+    rows : i32,
+    cols : i32
+}
+
+struct AccM {
+    read  : fn(i32, i32) -> f32,
+    write : fn(i32, i32, f32) -> ()
+}
+
+struct AccS {
+    readC  : fn(i32, i32) -> f32,
+    readI  : fn(i32, i32) -> i32,
+    write : fn(i32, i32, f32) -> ()
+}
+
+fn @make_matrix(buffer: Buffer, rows: i32, cols: i32) -> Matrix {
+    Matrix { buf: buffer, rows: rows, cols: cols }
+}
+
+fn @make_matrix_empty(rows: i32, cols: i32) -> Matrix {
+    let size = (4 * cols * rows) as i64;
+    let buffer = alloc(0, size);
+    Matrix { buf: buffer, rows: rows, cols: cols }
+}
+
+fn @make_sparse(content: Buffer, indizes: Buffer, rows: i32, cols: i32) -> Sparse {
+    Sparse { content: content, indizes: indizes, rows: rows, cols: cols}
+}
+
+fn @make_sparse_empty(rows: i32, cols: i32) -> Sparse {
+    let size = (4 * rows * cols) as i64;
+    let buff_c = alloc(0, size);
+    let buff_i = alloc(0, size);
+    Sparse { content: buff_c, indizes: buff_i, rows: rows, cols: cols}
+}
+
+fn @get_sparse_acc(m: Sparse) -> AccS {
+    AccS {
+        readC : @|r, c|    { bitcast[&   [f32]](m.content.data)(r * m.cols + c) },
+        readI : @|r, c|    { bitcast[&   [i32]](m.indizes.data)(r * m.cols + c) },
+        write : @|r, c, v| { bitcast[&mut[f32]](m.content.data)(r * m.cols + c) = v }
+    }
+}
+
+fn @get_mat_acc(m: Matrix) -> AccM {
+    AccM {
+        read  : @|r, c|    { bitcast[&   [f32]](m.buf.data)(r * m.cols + c) },
+        write : @|r, c, v| { bitcast[&mut[f32]](m.buf.data)(r * m.cols + c) = v }
+    }
+}
+
+fn @matmul(a: Matrix, b: Matrix) -> Matrix {
+    let m = make_matrix_empty(a.rows, b.cols);
+    let m_acc = get_mat_acc(m);
+    let a_acc = get_mat_acc(a);
+    let b_acc = get_mat_acc(b);
+
+    for _v, r, c in iterate_matrix(m) {
+        m_acc.write(r, c, 0.f);
+        for i in range(0, a.cols) {
+            m_acc.write(r, c, m_acc.read(r, c) + a_acc.read(r, i) * b_acc.read(i, c));
+        }
+    }
+    m
+}
+
+fn @sparse_mult(a: Sparse, b: Matrix) -> Matrix {
+    let m = make_matrix_empty(a.rows, b.cols);
+    let m_acc = get_mat_acc(m);
+    let a_acc = get_sparse_acc(a);
+    let b_acc = get_mat_acc(b);
+
+    for _v, r, c in iterate_matrix(m) {
+        m_acc.write(r, c, 0.f);
+        for v, i, _x in iterate_sparse_row(a, r) {
+            m_acc.write(r, c, m_acc.read(r, c) + v * b_acc.read(i, c));
+        }
+    }
+    m
+}
+
+fn @iterate_matrix(mat: Matrix, body: fn(f32, i32, i32) -> ()) -> () {
+    let acc = get_mat_acc(mat);
+    for r in range(0, mat.rows) {
+        for c in range(0, mat.cols) {
+            @@body(acc.read(r, c), r, c);
+        }
+    }
+}
+
+fn @iterate_matrix_row(mat: Matrix, r: i32, body: fn(f32, i32) -> ()) -> () {
+    let acc = get_mat_acc(mat);
+    for c in range(0, mat.cols) {
+        @@body(acc.read(r, c), c);
+    }
+}
+
+fn @iterate_matrix_col(mat: Matrix, c: i32, body: fn(f32, i32) -> ()) -> () {
+    let acc = get_mat_acc(mat);
+    for r in range(0, mat.rows) {
+        @@body(acc.read(r, c), r);
+    }
+}
+
+fn @iterate_sparse(mat: Sparse, body: fn(f32, i32, i32, i32) -> ()) -> () {
+    let acc = get_sparse_acc(mat);
+    for r in range(0, mat.rows) {
+        for c in range(0, mat.cols) {
+            @@body(acc.readC(r, c), acc.readI(r, c), r, c);
+        }
+    }
+}
+
+fn @iterate_sparse_row(mat: Sparse, r: i32, body: fn(f32, i32, i32) -> ()) -> () {
+    let acc = get_sparse_acc(mat);
+    for c in range(0, mat.cols) {
+        @@body(acc.readC(r, c), acc.readI(r, c), c);
+    }
+}
+
+fn @iterate_sparse_col(mat: Sparse, c: i32, body: fn(f32, i32, i32) -> ()) -> () {
+    let acc = get_sparse_acc(mat);
+    for r in range(0, mat.rows) {
+        @@body(acc.readC(r, c), acc.readI(r, c), r);
+    }
+}
+
+fn @print_matrix(mat: Matrix) -> () {
+    for val, _r, c in iterate_matrix(mat) {
+        print_f32(val); print_string("\t");
+        if c == mat.cols - 1 {
+            print_string("\n");
+        }
+    }
+}
+
+fn @print_sparse_content(mat: Sparse) -> () {
+    for val, _i, _r, c in iterate_sparse(mat) {
+        print_f32(val); print_string("\t");
+        if c == mat.cols - 1 {
+            print_string("\n");
+        }
+    }
+}
+
+fn @print_sparse_indizes(mat: Sparse) -> () {
+    for _val, i, _r, c in iterate_sparse(mat) {
+        print_i32(i); print_string("\t");
+        if c == mat.cols - 1 {
+            print_string("\n");
+        }
+    }
+}
+
+extern fn mat_test(cnt: &Buffer, idz: &Buffer, buf: &Buffer) -> () {
+    let m = make_sparse(*cnt, *idz, 2, 2);
+    let n = make_matrix(*buf, 3, 3);
+
+    print_sparse_content(m);print_string("\n");
+    print_sparse_indizes(m);print_string("\n");
+
+    print_matrix(n);print_string("\n");
+
+    let x = sparse_mult(m, n);
+
+    print_matrix(x);
+}

@@ -1,5 +1,7 @@
 set(IMP_SRCS
-nn.impala
+    nn.impala
+    image.impala
+    matrix.impala
 )
 
 set(NN_SRCS

@@ -1,0 +1,15 @@
+struct Img {
+    buf : Buffer,
+    width  : i32,
+    height : i32
+}
+
+struct Color {
+    r: f32,
+    g: f32,
+    b: f32
+}
+
+extern fn get_42() -> int {
+    42
+}
