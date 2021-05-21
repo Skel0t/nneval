@@ -19,7 +19,7 @@ struct AccM {
 struct AccS {
     readC  : fn(i32, i32) -> f32,
     readI  : fn(i32, i32) -> i32,
-    write : fn(i32, i32, f32) -> ()
+    write : fn(i32, i32, f32, i32) -> ()
 }
 
 fn @make_matrix(buffer: Buffer, rows: i32, cols: i32) -> Matrix {
@@ -30,6 +30,14 @@ fn @make_matrix_empty(rows: i32, cols: i32) -> Matrix {
     let size = (4 * cols * rows) as i64;
     let buffer = alloc(0, size);
     Matrix { buf: buffer, rows: rows, cols: cols }
+}
+
+fn @reshape_matrix(m: Matrix, rows: i32, cols: i32) -> Matrix {
+    if m.rows * m.cols == rows * cols {
+        make_matrix(m.buf, rows, cols)
+    } else {
+        m
+    }
 }
 
 fn @make_sparse(content: Buffer, indizes: Buffer, rows: i32, cols: i32) -> Sparse {
@@ -45,16 +53,17 @@ fn @make_sparse_empty(rows: i32, cols: i32) -> Sparse {
 
 fn @get_sparse_acc(m: Sparse) -> AccS {
     AccS {
-        readC : @|r, c|    { bitcast[&   [f32]](m.content.data)(r * m.cols + c) },
-        readI : @|r, c|    { bitcast[&   [i32]](m.indizes.data)(r * m.cols + c) },
-        write : @|r, c, v| { bitcast[&mut[f32]](m.content.data)(r * m.cols + c) = v }
+        readC : @|r, c|       { bitcast[&   [f32]](m.content.data)(r * m.cols + c) },
+        readI : @|r, c|       { bitcast[&   [i32]](m.indizes.data)(r * m.cols + c) },
+        write : @|r, c, v, i| { bitcast[&mut[f32]](m.content.data)(r * m.cols + c) = v;
+                                bitcast[&mut[i32]](m.indizes.data)(r * m.cols + c) = i; }
     }
 }
 
 fn @get_mat_acc(m: Matrix) -> AccM {
     AccM {
         read  : @|r, c|    { bitcast[&   [f32]](m.buf.data)(r * m.cols + c) },
-        write : @|r, c, v| { bitcast[&mut[f32]](m.buf.data)(r * m.cols + c) = v }
+        write : @|r, c, v| { bitcast[&mut[f32]](m.buf.data)(r * m.cols + c) = v; }
     }
 }
 

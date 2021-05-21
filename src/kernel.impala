@@ -1,0 +1,31 @@
+fn make_conv_matrix(kernel: Matrix, width: i32, height: i32) -> Sparse {
+    let m = make_sparse_empty(width * height, kernel.cols * kernel.rows);
+    let m_acc = get_sparse_acc(m);
+    let k_acc = get_mat_acc(kernel);
+
+    // Not very efficient, but should be okay since this is only necessary once
+    for _v, _i, r, c in iterate_sparse(m) {
+        m_acc.write(r, c, 0.f, -1);
+    }
+
+    let ksizeh = kernel.rows / 2; // kernel.width == kernel.height
+    for j in range(0, height) {
+        for i in range(0, width) {
+            let s_row = j * width + i;
+            for y in range(-ksizeh, ksizeh+1) {
+                let im_r = j + y;
+                if im_r < 0 || im_r >= height { continue() } // padding with 0s s.t. image size at start and end is the same
+                for x in range(-ksizeh, ksizeh+1) {
+                    let im_c = i + x;
+                    if im_c < 0 || im_c >= width { continue() } // padding with 0s s.t. image size at start and end is the same
+
+                    let r = y + ksizeh;
+                    let c = x + ksizeh;
+                    let s_col = (y + ksizeh) * kernel.cols + x + ksizeh;
+                    m_acc.write(s_row, s_col, k_acc.read(r, c), im_r * width + im_c);
+                }
+            }
+        }
+    }
+    m
+}

@@ -8,8 +8,8 @@ extern "C" {
 #endif
 
 void hello_world(void);
-int get_42(void);
 void sparse_mult_test(anydsl::Array<float>*, anydsl::Array<int>*, anydsl::Array<float>*);
+void create_conv_test(anydsl::Array<float>*, anydsl::Array<float>*);
 
 #ifdef __cplusplus
 }

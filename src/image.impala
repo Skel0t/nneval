@@ -1,4 +1,4 @@
-struct Img {
+struct Image {
     buf : Buffer,
     width  : i32,
     height : i32
@@ -10,6 +10,7 @@ struct Color {
     b: f32
 }
 
-extern fn get_42() -> int {
-    42
+// Kernel size, Channel count
+fn im2col(img: Image, ksize: i32, channels: i32, padding:i32, stride: i32) -> () {
+    // TODO: Do I need this? Shouldn't I just use sparse matrices for the weights?
 }

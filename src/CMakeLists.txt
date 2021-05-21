@@ -5,11 +5,15 @@ set(IMP_SRCS
     interface.impala
     output.impala
     iterate.impala
+    kernel.impala
 )
 
 set(NN_SRCS
     nn.h
+    image.h
+    file_path.h
     test.cpp
+    image.cpp
 )
 
 anydsl_runtime_wrap(NN_OBJS

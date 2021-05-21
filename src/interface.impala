@@ -11,3 +11,18 @@ extern fn sparse_mult_test(cnt: &Buffer, idz: &Buffer, buf: &Buffer) -> () {
 
     print_matrix(x);
 }
+
+extern fn create_conv_test(img: &Buffer, kernel: &Buffer) -> () {
+    let m = make_matrix(*img, 16, 1);
+    let k = make_matrix(*kernel, 3, 3);
+
+    let n = make_conv_matrix(k, 4, 4);
+
+    print_sparse_content(n); print_string("\n");
+    print_sparse_indizes(n); print_string("\n");
+
+    let mut x = sparse_mult(n, m);
+    x = reshape_matrix(x, 4, 4);
+
+    print_matrix(x);
+}
