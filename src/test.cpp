@@ -51,9 +51,9 @@ void sparseMult() {
 }
 
 void imageTest() {
-    float kernel[] = {  .001f,    .001f,    .001f,     .01f,    .01f,    .01f,    .001f,    .001f,    .001f,
-                        .01f,     .01f,     .01f,      .1f,     .1f,     .1f,     .01f,     .01f,     .01f,
-                        .001f,    .001f,    .001f,     .01f,    .01f,    .01f,    .001f,    .001f,    .001f};
+    float kernel[] = {  .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f,
+                        .0f,    .0f,    .0f,     .33f,     .33f,     .33f,    .0f,    .0f,    .0f,
+                        .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f};
     anydsl::Array<float> dsl_kernel(sizeof(float) * 27);
     anydsl_copy(0, kernel, 0, 0, dsl_kernel.data(), 0, 27 * sizeof(float));
 

@@ -173,11 +173,11 @@ bool save_png2(const FilePath& path, const uint8_t* pixels, const int width, con
     png_write_info(png_ptr, info_ptr);
 
     for (size_t y = 0; y < height; y++) {
-        auto img_row = pixels + 3 * width * (height - 1 - y);
+        auto img_row = pixels + width * (height - 1 - y);
         for (size_t x = 0; x < width; x++) {
-            row_bytes[x * 4 + 0] = img_row[x * 3 + 0];
-            row_bytes[x * 4 + 1] = img_row[x * 3 + 1];
-            row_bytes[x * 4 + 2] = img_row[x * 3 + 2];
+            row_bytes[x * 4 + 0] = img_row[x];
+            row_bytes[x * 4 + 1] = img_row[x];
+            row_bytes[x * 4 + 2] = img_row[x];
             row_bytes[x * 4 + 3] = 255;
         }
         png_write_row(png_ptr, row_bytes.get());

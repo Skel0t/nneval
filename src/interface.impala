@@ -20,7 +20,7 @@ extern fn create_conv_test(img: &Buffer, kernel: &Buffer) -> () {
     let m = make_matrix(*img, 16, 1);
     let k = make_matrix(*kernel, 3, 3);
 
-    let n = make_conv_matrix(k, 4, 4);
+    let n = make_conv_matrix(k, 4, 4, 3);
 
     print_sparse_content(n); print_string("\n");
     print_sparse_indizes(n); print_string("\n");
@@ -33,27 +33,8 @@ extern fn create_conv_test(img: &Buffer, kernel: &Buffer) -> () {
 
 extern fn image_kernel_test(kernel: &Buffer) -> &[u8] {
     let img = load_png("/home/woshi/Documents/nneval/src/mitchell.png");
-    let m = make_matrix_empty(1111 * 1920 * 3, 1);
-
-    let idata = bitcast[&[u8]](img.buf.data);
-    let acc = get_mat_acc(m);
-    for _v, r, c in iterate_matrix(m) {
-        let idx = (r * m.cols + c);
-        let val = (idata(idx) as f32) / 255.0f;
-        acc.write(r, c, val);
-    }
 
     let k = make_matrix(*kernel, 3, 9);
 
-    let n = make_conv_matrix(k, 1920 * 3, 1111);
-
-    let prod = sparse_mult(n, m);
-
-    let x = reshape_matrix(prod, 1111, 1920 * 3);
-
-    for v, r, c in iterate_matrix(x) {
-        bitcast[&mut[u8]](img.buf.data)(r * x.cols + c) = (v * 255.0f) as u8;
-    }
-
-    bitcast[&mut[u8]](img.buf.data)
+    conv2d(k, 3, img)
 }

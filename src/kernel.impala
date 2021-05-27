@@ -1,5 +1,5 @@
-fn make_conv_matrix(kernel: Matrix, width: i32, height: i32) -> Sparse {
-    let m = make_sparse_empty(width * height, kernel.cols * kernel.rows);
+fn make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i32) -> Sparse {
+    let m = make_sparse_empty(im_width * im_height, kernel.cols * kernel.rows);
     let m_acc = get_sparse_acc(m);
     let k_acc = get_mat_acc(kernel);
 
@@ -9,24 +9,61 @@ fn make_conv_matrix(kernel: Matrix, width: i32, height: i32) -> Sparse {
     }
 
     let ksizeh_r = kernel.rows / 2;
-    let ksizeh_c = kernel.cols / 2;
-    for j in range(0, height) {
-        for i in range(0, width) {
-            let s_row = j * width + i;
-            for y in range(-ksizeh_r, ksizeh_r+1) {
-                let im_r = j + y;
-                if im_r < 0 || im_r >= height { continue() } // padding with 0s s.t. image size at start and end is the same
-                for x in range(-ksizeh_c, ksizeh_c+1) {
-                    let im_c = i + x;
-                    if im_c < 0 || im_c >= width { continue() } // padding with 0s s.t. image size at start and end is the same
+    let ksizeh_c = kernel.cols / (2 * channels);
 
-                    let r = y + ksizeh_r;
-                    let c = x + ksizeh_c;
-                    let s_col = r * kernel.cols + c;
-                    m_acc.write(s_row, s_col, k_acc.read(r, c), im_r * width + im_c);
+    let stride_x = im_width * channels;
+
+    for j in range(0, im_height) {
+        for i in range(0, im_width) {
+            let s_row = j * im_width + i;
+            for r in range(-ksizeh_r, ksizeh_r+1) {
+                let im_row = j + r;
+                if im_row < 0 || im_row >= im_height { continue() } // padding with 0s s.t. image size at start and end is the same
+                for c in range(-ksizeh_c, ksizeh_c+1) {
+                    for channel in range(0, channels) {
+                        let im_col = (i + c) * channels + channel;
+                        if im_col < 0 || im_col >= stride_x { continue() } // padding with 0s s.t. image size at start and end is the same
+
+                        let k_row = r + ksizeh_r;
+                        let k_col = (c + ksizeh_c) * channels + channel;
+
+                        let s_col = k_row * kernel.cols + k_col;
+                        m_acc.write(s_row, s_col, k_acc.read(k_row, k_col), im_row * stride_x + im_col);
+                    }
                 }
             }
         }
     }
     m
+}
+
+// Image needs to be channel-interleaved (e.g. RGBRGBRGB), same for kernel weights
+fn conv2d(kernel: Matrix, channels: i32, img: Image) -> &[u8] {
+    let buffer = alloc(0, (img.width * img.height) as i64);
+    let m = make_matrix_empty(img.height * img.width * channels, 1);    // Image as column-vector, interleaved column style
+
+    // Write image into matrix
+    let idata = bitcast[&[u8]](img.buf.data);
+    let acc = get_mat_acc(m);
+    for _v, r, c in iterate_matrix(m) {
+        let idx = (r * m.cols + c);
+        let val = (idata(idx) as f32) / 255.0f;
+        acc.write(r, c, val);
+    }
+
+    let conv = make_conv_matrix(kernel, img.width, img.height, channels);
+    let prod = sparse_mult(conv, m);
+
+    release(m.buf);
+    release(conv.content);
+    release(conv.indizes);
+
+    print_i32(conv.rows); print_string("\n");
+
+    let bufWriter = bitcast[&mut[u8]](buffer.data);
+    for v, r, c in iterate_matrix(prod) {
+        bufWriter(r * prod.cols + c) = (v * 255.0f) as u8;
+    }
+
+    bufWriter
 }
