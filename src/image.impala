@@ -4,13 +4,23 @@ struct Image {
     height : i32
 }
 
-struct Color {
-    r: f32,
-    g: f32,
-    b: f32
+fn make_image(buf: Buffer, width: i32, height: i32) -> Image {
+    Image { buf: buf, width: width, height: height }
+}
+
+fn load_png(filename: &[u8]) -> Image {
+    let mut ptr;
+    let mut pixel_data;
+    let mut width;
+    let mut height;
+
+    nn_load_png(0, filename, &mut ptr, &mut width, &mut height);
+    pixel_data.data = ptr as &[i8];
+    make_image(pixel_data, width, height)
 }
 
 // Kernel size, Channel count
 fn im2col(img: Image, ksize: i32, channels: i32, padding:i32, stride: i32) -> () {
     // TODO: Do I need this? Shouldn't I just use sparse matrices for the weights?
+    // Well then I need <newlayer-depth> many matrix multiplications, like this only one would be necessary
 }

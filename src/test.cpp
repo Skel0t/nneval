@@ -8,7 +8,7 @@ void imageTest();
 void create_conv();
 
 int main() {
-    create_conv();
+    imageTest();
 
     return 0;
 }
@@ -51,8 +51,12 @@ void sparseMult() {
 }
 
 void imageTest() {
-    ImageRgba32 img;
-    FilePath path("/home/woshi/Documents/nneval/src/mitchell.png");
-    load_png(path, img);
-    save_png(FilePath("out.png"), img);
+    float kernel[] = {  .001f,    .001f,    .001f,     .01f,    .01f,    .01f,    .001f,    .001f,    .001f,
+                        .01f,     .01f,     .01f,      .1f,     .1f,     .1f,     .01f,     .01f,     .01f,
+                        .001f,    .001f,    .001f,     .01f,    .01f,    .01f,    .001f,    .001f,    .001f};
+    anydsl::Array<float> dsl_kernel(sizeof(float) * 27);
+    anydsl_copy(0, kernel, 0, 0, dsl_kernel.data(), 0, 27 * sizeof(float));
+
+    uint8_t* ptr = image_kernel_test(&dsl_kernel);
+    save_png2(FilePath("out.png"), ptr, 1920, 1111);
 }

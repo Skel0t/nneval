@@ -1,3 +1,7 @@
+extern "C" {
+    fn nn_load_png(i32, &[u8], &mut &[u8], &mut i32, &mut i32) -> ();
+}
+
 extern fn sparse_mult_test(cnt: &Buffer, idz: &Buffer, buf: &Buffer) -> () {
     let m = make_sparse(*cnt, *idz, 2, 2);
     let n = make_matrix(*buf, 3, 3);
@@ -25,4 +29,31 @@ extern fn create_conv_test(img: &Buffer, kernel: &Buffer) -> () {
     x = reshape_matrix(x, 4, 4);
 
     print_matrix(x);
+}
+
+extern fn image_kernel_test(kernel: &Buffer) -> &[u8] {
+    let img = load_png("/home/woshi/Documents/nneval/src/mitchell.png");
+    let m = make_matrix_empty(1111 * 1920 * 3, 1);
+
+    let idata = bitcast[&[u8]](img.buf.data);
+    let acc = get_mat_acc(m);
+    for _v, r, c in iterate_matrix(m) {
+        let idx = (r * m.cols + c);
+        let val = (idata(idx) as f32) / 255.0f;
+        acc.write(r, c, val);
+    }
+
+    let k = make_matrix(*kernel, 3, 9);
+
+    let n = make_conv_matrix(k, 1920 * 3, 1111);
+
+    let prod = sparse_mult(n, m);
+
+    let x = reshape_matrix(prod, 1111, 1920 * 3);
+
+    for v, r, c in iterate_matrix(x) {
+        bitcast[&mut[u8]](img.buf.data)(r * x.cols + c) = (v * 255.0f) as u8;
+    }
+
+    bitcast[&mut[u8]](img.buf.data)
 }
