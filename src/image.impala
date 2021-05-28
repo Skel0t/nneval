@@ -19,6 +19,23 @@ fn load_png(filename: &[u8]) -> Image {
     make_image(pixel_data, width, height)
 }
 
+fn make_interleaved(buffer: Buffer, channels: i32, width: i32, height: i32) -> Buffer {
+    let bufC = alloc(0, (width * height * channels) as i64);
+    let accC = bitcast[&mut[u8]](bufC.data);
+    let accB = bitcast[&[u8]](buffer.data);
+
+    for y in range(0, height) {
+        for x in range(0, width) {
+            for i in range(0, channels) {
+                accC((y * width + x) * channels + i) = accB(y * width + x + i * width * height);
+            }
+        }
+    }
+
+    release(buffer);
+    bufC
+}
+
 // Kernel size, Channel count
 fn im2col(img: Image, ksize: i32, channels: i32, padding:i32, stride: i32) -> () {
     // TODO: Do I need this? Shouldn't I just use sparse matrices for the weights?

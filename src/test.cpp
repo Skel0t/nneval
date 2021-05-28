@@ -68,5 +68,5 @@ void imageTest() {
     anydsl_copy(0, kernel3, 0, 0, dsl_kernel3.data(), 0, 27 * sizeof(float));
 
     uint8_t* ptr = image_kernel_test(&dsl_kernel1, &dsl_kernel2, &dsl_kernel3);
-    save_png_grayscale(FilePath("out.png"), ptr, 1920, 3 * 1111);
+    save_png_pointer(FilePath("out.png"), ptr, 1920, 1111);
 }
