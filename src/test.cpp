@@ -51,14 +51,14 @@ void sparseMult() {
 }
 
 void imageTest() {
-    float kernel1[] = {  .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f,
+    float kernel1[] = { .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f,
                         .0f,    .0f,    .0f,     1.f,     .0f,     .0f,    .0f,    .0f,    .0f,
                         .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f};
-    float kernel2[] = {  .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f,
-                        .0f,    .0f,    .0f,     .0,     1.f,     .0f,    .0f,    .0f,    .0f,
+    float kernel2[] = { .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f,
+                        .0f,    .0f,    .0f,     .0,      1.f,     .0f,    .0f,    .0f,    .0f,
                         .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f};
-    float kernel3[] = {  .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f,
-                        .0f,    .0f,    .0f,     .0f,     .0f,     1.f,    .0f,    .0f,    .0f,
+    float kernel3[] = { .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f,
+                        .0f,    .0f,    .0f,     .0f,     .0f,     .1f,    .0f,    .0f,    .0f,
                         .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f};
     anydsl::Array<float> dsl_kernel1(sizeof(float) * 27);
     anydsl::Array<float> dsl_kernel2(sizeof(float) * 27);
@@ -67,6 +67,15 @@ void imageTest() {
     anydsl_copy(0, kernel2, 0, 0, dsl_kernel2.data(), 0, 27 * sizeof(float));
     anydsl_copy(0, kernel3, 0, 0, dsl_kernel3.data(), 0, 27 * sizeof(float));
 
-    uint8_t* ptr = image_kernel_test(&dsl_kernel1, &dsl_kernel2, &dsl_kernel3);
+    ImageRgba32 img;
+    load_png(FilePath("/home/woshi/Documents/nneval/src/mitchell.png"), img);
+
+    uint8_t* ptr = image_kernel_test(&dsl_kernel1, &dsl_kernel2, &dsl_kernel3, &img.pixels);
+
+    img.pixels.release();
+    dsl_kernel1.release();
+    dsl_kernel2.release();
+    dsl_kernel3.release();
+
     save_png_pointer(FilePath("out.png"), ptr, 1920, 1111);
 }

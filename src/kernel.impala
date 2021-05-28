@@ -39,7 +39,7 @@ fn make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i32
 }
 
 // Image needs to be channel-interleaved (e.g. RGBRGBRGB), same for kernel weights
-fn conv2d(kernel: Matrix, channels: i32, img: Image) -> &[u8] {
+fn conv2d(kernel: Matrix, channels: i32, img: Image) -> Buffer {
     let size = (img.width * img.height) as i64;
     let buffer = alloc(0, size);
     let m = make_matrix_empty(img.height * img.width * channels, 1);    // Image as column-vector, interleaved column style
@@ -55,6 +55,7 @@ fn conv2d(kernel: Matrix, channels: i32, img: Image) -> &[u8] {
 
     let conv = make_conv_matrix(kernel, img.width, img.height, channels);
     let prod = sparse_mult(conv, m);
+    let reshaped = reshape_matrix(prod, img.height, img.width);
 
     release(m.buf);
     release(conv.content);
@@ -66,5 +67,29 @@ fn conv2d(kernel: Matrix, channels: i32, img: Image) -> &[u8] {
     }
     release(prod.buf);
 
-    bufWriter
+    buffer
+}
+
+fn max_pool(ksize: i32, channels:i32, img: Image) -> Buffer {
+    let buffer = alloc(0, (img.width * img.height * channels / (ksize * ksize)) as i64);
+
+    let acc     = bitcast[&mut[u8]](buffer.data);
+    let img_acc = bitcast[&[u8]](img.buf.data);
+    for i in range(0, channels) {
+        for y in range(0, img.height / 2) {
+            for x in range(0, img.width / 2) {
+                let v11 = img_acc((i * img.width * img.height) + y     * img.width + x);
+                let v12 = img_acc((i * img.width * img.height) + y     * img.width + x+1);
+                let v21 = img_acc((i * img.width * img.height) + (y+1) * img.width + x);
+                let v22 = img_acc((i * img.width * img.height) + (y+1) * img.width + x+1);
+
+                let val = max();
+            }
+        }
+    }
+    buffer
+}
+
+fn max() -> () {
+
 }

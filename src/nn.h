@@ -10,7 +10,7 @@ extern "C" {
 void hello_world(void);
 void sparse_mult_test(anydsl::Array<float>*, anydsl::Array<int>*, anydsl::Array<float>*);
 void create_conv_test(anydsl::Array<float>*, anydsl::Array<float>*);
-uint8_t* image_kernel_test(anydsl::Array<float>*, anydsl::Array<float>*, anydsl::Array<float>*);
+uint8_t* image_kernel_test(anydsl::Array<float>*, anydsl::Array<float>*, anydsl::Array<float>*, anydsl::Array<uint8_t>*);
 
 #ifdef __cplusplus
 }

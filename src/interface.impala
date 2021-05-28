@@ -31,22 +31,26 @@ extern fn create_conv_test(img: &Buffer, kernel: &Buffer) -> () {
     print_matrix(x);
 }
 
-extern fn image_kernel_test(kernel1: &Buffer, kernel2: &Buffer, kernel3: &Buffer) -> &[u8] {
-    let img = load_png("/home/woshi/Documents/nneval/src/mitchell.png");
+extern fn image_kernel_test(kernel1: &Buffer, kernel2: &Buffer, kernel3: &Buffer, img_buf: &Buffer) -> &[u8] {
+    let img = make_image(*img_buf, 1920, 1111);
 
     let k1 = make_matrix(*kernel1, 3, 9);
     let k2 = make_matrix(*kernel2, 3, 9);
     let k3 = make_matrix(*kernel3, 3, 9);
 
-    let mut buf = alloc(0, (img.width * img.height * 3) as i64);
-
     let c1 = conv2d(k1, 3, img);
     let c2 = conv2d(k2, 3, img);
     let c3 = conv2d(k3, 3, img);
 
-    runtime_copy(0, c1 as &[i8], 0i64, 0, buf.data, (0 * img.width * img.height) as i64, (img.width * img.height) as i64);
-    runtime_copy(0, c2 as &[i8], 0i64, 0, buf.data, (1 * img.width * img.height) as i64, (img.width * img.height) as i64);
-    runtime_copy(0, c3 as &[i8], 0i64, 0, buf.data, (2 * img.width * img.height) as i64, (img.width * img.height) as i64);
+    let mut buf = alloc(0, (img.width * img.height * 3) as i64);
+
+    runtime_copy(0, c1.data as &[i8], 0i64, 0, buf.data, (0 * img.width * img.height) as i64, (img.width * img.height) as i64);
+    runtime_copy(0, c2.data as &[i8], 0i64, 0, buf.data, (1 * img.width * img.height) as i64, (img.width * img.height) as i64);
+    runtime_copy(0, c3.data as &[i8], 0i64, 0, buf.data, (2 * img.width * img.height) as i64, (img.width * img.height) as i64);
+
+    release(c1);
+    release(c2);
+    release(c3);
 
     buf = make_interleaved(buf, 3, img.width, img.height);
 
