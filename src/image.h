@@ -14,6 +14,7 @@ struct ImageRgba32 {
 
 bool load_png(const FilePath&, ImageRgba32&);
 bool save_png(const FilePath&, const ImageRgba32&);
-bool save_png2(const FilePath& path, const uint8_t* pixels, const int width, const int height);
+bool save_png_grayscale(const FilePath& path, const uint8_t* pixels, const int width, const int height);
+bool save_png_pointer(const FilePath& path, const uint8_t* pixels, const int width, const int height);
 
 #endif // IMAGE_H

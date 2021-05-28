@@ -11,7 +11,7 @@ fn make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i32
     let ksizeh_r = kernel.rows / 2;
     let ksizeh_c = kernel.cols / (2 * channels);
 
-    let stride_x = im_width * channels;
+    let stride_y = im_width * channels;
 
     for j in range(0, im_height) {
         for i in range(0, im_width) {
@@ -20,15 +20,16 @@ fn make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i32
                 let im_row = j + r;
                 if im_row < 0 || im_row >= im_height { continue() } // padding with 0s s.t. image size at start and end is the same
                 for c in range(-ksizeh_c, ksizeh_c+1) {
+                    let mut im_col = (i + c) * channels;
+                    if im_col < 0 || im_col >= stride_y { continue() } // padding with 0s s.t. image size at start and end is the same
+                    let k_row = r + ksizeh_r;
+                    let mut k_col = (c + ksizeh_c) * channels;
+                    let mut s_col = k_row * kernel.cols + k_col;
                     for channel in range(0, channels) {
-                        let im_col = (i + c) * channels + channel;
-                        if im_col < 0 || im_col >= stride_x { continue() } // padding with 0s s.t. image size at start and end is the same
-
-                        let k_row = r + ksizeh_r;
-                        let k_col = (c + ksizeh_c) * channels + channel;
-
-                        let s_col = k_row * kernel.cols + k_col;
-                        m_acc.write(s_row, s_col, k_acc.read(k_row, k_col), im_row * stride_x + im_col);
+                        m_acc.write(s_row, s_col, k_acc.read(k_row, k_col), im_row * stride_y + im_col);
+                        im_col++;
+                        k_col++;
+                        s_col++;
                     }
                 }
             }
@@ -39,7 +40,8 @@ fn make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i32
 
 // Image needs to be channel-interleaved (e.g. RGBRGBRGB), same for kernel weights
 fn conv2d(kernel: Matrix, channels: i32, img: Image) -> &[u8] {
-    let buffer = alloc(0, (img.width * img.height) as i64);
+    let size = (img.width * img.height) as i64;
+    let buffer = alloc(0, size);
     let m = make_matrix_empty(img.height * img.width * channels, 1);    // Image as column-vector, interleaved column style
 
     // Write image into matrix
@@ -47,7 +49,7 @@ fn conv2d(kernel: Matrix, channels: i32, img: Image) -> &[u8] {
     let acc = get_mat_acc(m);
     for _v, r, c in iterate_matrix(m) {
         let idx = (r * m.cols + c);
-        let val = (idata(idx) as f32) / 255.0f;
+        let val = (idata(idx)) as f32 / 255.0f;
         acc.write(r, c, val);
     }
 
@@ -58,12 +60,11 @@ fn conv2d(kernel: Matrix, channels: i32, img: Image) -> &[u8] {
     release(conv.content);
     release(conv.indizes);
 
-    print_i32(conv.rows); print_string("\n");
-
     let bufWriter = bitcast[&mut[u8]](buffer.data);
     for v, r, c in iterate_matrix(prod) {
         bufWriter(r * prod.cols + c) = (v * 255.0f) as u8;
     }
+    release(prod.buf);
 
     bufWriter
 }

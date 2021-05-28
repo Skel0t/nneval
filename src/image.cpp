@@ -143,7 +143,52 @@ bool save_png(const FilePath& path, const ImageRgba32& img) {
     return true;
 }
 
-bool save_png2(const FilePath& path, const uint8_t* pixels, const int width, const int height) {
+bool save_png_pointer(const FilePath& path, const uint8_t* pixels, const int width, const int height) {
+    std::ofstream file(path, std::ofstream::binary);
+    if (!file)
+        return false;
+
+    png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+    if (!png_ptr)
+        return false;
+
+    png_infop info_ptr = png_create_info_struct(png_ptr);
+    if (!info_ptr) {
+        png_destroy_read_struct(&png_ptr, nullptr, nullptr);
+        return false;
+    }
+
+    std::unique_ptr<uint8_t[]> row_bytes(new uint8_t[width * 4]);
+    if (setjmp(png_jmpbuf(png_ptr))) {
+        png_destroy_write_struct(&png_ptr, &info_ptr);
+        return false;
+    }
+
+    png_set_write_fn(png_ptr, &file, png_write_to_stream, png_flush_stream);
+
+    png_set_IHDR(png_ptr, info_ptr, width, height,
+                 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
+                 PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+
+    png_write_info(png_ptr, info_ptr);
+
+    for (size_t y = 0; y < height; y++) {
+        auto img_row = pixels + 3 * width * (height - 1 - y);
+        for (size_t x = 0; x < width; x++) {
+            row_bytes[x * 4 + 0] = img_row[3*x];
+            row_bytes[x * 4 + 1] = img_row[3*x+1];
+            row_bytes[x * 4 + 2] = img_row[3*x+2];
+            row_bytes[x * 4 + 3] = 255;
+        }
+        png_write_row(png_ptr, row_bytes.get());
+    }
+
+    png_write_end(png_ptr, info_ptr);
+    png_destroy_write_struct(&png_ptr, &info_ptr);
+    return true;
+}
+
+bool save_png_grayscale(const FilePath& path, const uint8_t* pixels, const int width, const int height) {
     std::ofstream file(path, std::ofstream::binary);
     if (!file)
         return false;

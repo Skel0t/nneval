@@ -51,12 +51,22 @@ void sparseMult() {
 }
 
 void imageTest() {
-    float kernel[] = {  .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f,
-                        .0f,    .0f,    .0f,     .33f,     .33f,     .33f,    .0f,    .0f,    .0f,
+    float kernel1[] = {  .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f,
+                        .0f,    .0f,    .0f,     1.f,     .0f,     .0f,    .0f,    .0f,    .0f,
                         .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f};
-    anydsl::Array<float> dsl_kernel(sizeof(float) * 27);
-    anydsl_copy(0, kernel, 0, 0, dsl_kernel.data(), 0, 27 * sizeof(float));
+    float kernel2[] = {  .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f,
+                        .0f,    .0f,    .0f,     .0,     1.f,     .0f,    .0f,    .0f,    .0f,
+                        .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f};
+    float kernel3[] = {  .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f,
+                        .0f,    .0f,    .0f,     .0f,     .0f,     1.f,    .0f,    .0f,    .0f,
+                        .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f};
+    anydsl::Array<float> dsl_kernel1(sizeof(float) * 27);
+    anydsl::Array<float> dsl_kernel2(sizeof(float) * 27);
+    anydsl::Array<float> dsl_kernel3(sizeof(float) * 27);
+    anydsl_copy(0, kernel1, 0, 0, dsl_kernel1.data(), 0, 27 * sizeof(float));
+    anydsl_copy(0, kernel2, 0, 0, dsl_kernel2.data(), 0, 27 * sizeof(float));
+    anydsl_copy(0, kernel3, 0, 0, dsl_kernel3.data(), 0, 27 * sizeof(float));
 
-    uint8_t* ptr = image_kernel_test(&dsl_kernel);
-    save_png2(FilePath("out.png"), ptr, 1920, 1111);
+    uint8_t* ptr = image_kernel_test(&dsl_kernel1, &dsl_kernel2, &dsl_kernel3);
+    save_png_grayscale(FilePath("out.png"), ptr, 1920, 3 * 1111);
 }
