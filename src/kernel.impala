@@ -39,35 +39,20 @@ fn make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i32
 }
 
 // Image needs to be channel-interleaved (e.g. RGBRGBRGB), same for kernel weights
-fn conv2d(kernel: Matrix, channels: i32, img: Image) -> Buffer {
-    let size = (img.width * img.height) as i64;
-    let buffer = alloc(0, size);
-    let m = make_matrix_empty(img.height * img.width * channels, 1);    // Image as column-vector, interleaved column style
-
-    // Write image into matrix
-    let idata = bitcast[&[u8]](img.buf.data);
+fn conv2d(kernel: Matrix, channels: i32, img_mat: Matrix) -> Matrix {
+    let width = img_mat.cols / channels;
+    let height = img_mat.rows;
+    let m = reshape_matrix(img_mat, img_mat.rows * img_mat.cols, 1);    // Image as column-vector, interleaved column style
     let acc = get_mat_acc(m);
-    for _v, r, c in iterate_matrix(m) {
-        let idx = (r * m.cols + c);
-        let val = (idata(idx)) as f32 / 255.0f;
-        acc.write(r, c, val);
-    }
 
-    let conv = make_conv_matrix(kernel, img.width, img.height, channels);
+    let conv = make_conv_matrix(kernel, width, height, channels);
     let prod = sparse_mult(conv, m);
-    let reshaped = reshape_matrix(prod, img.height, img.width);
+    let reshaped = reshape_matrix(prod, height, width);
 
-    release(m.buf);
     release(conv.content);
     release(conv.indizes);
 
-    let bufWriter = bitcast[&mut[u8]](buffer.data);
-    for v, r, c in iterate_matrix(prod) {
-        bufWriter(r * prod.cols + c) = (v * 255.0f) as u8;
-    }
-    release(prod.buf);
-
-    buffer
+    reshaped
 }
 
 fn max_pool(ksize: i32, channels:i32, img: Image) -> Buffer {

@@ -36,6 +36,7 @@ fn @reshape_matrix(m: Matrix, rows: i32, cols: i32) -> Matrix {
     if m.rows * m.cols == rows * cols {
         make_matrix(m.buf, rows, cols)
     } else {
+        print_string("no success\n");
         m
     }
 }

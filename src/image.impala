@@ -8,6 +8,40 @@ fn make_image(buf: Buffer, width: i32, height: i32) -> Image {
     Image { buf: buf, width: width, height: height }
 }
 
+fn make_matrix_from_image(img: Image, channels: i32) -> Matrix {
+    let m = make_matrix_empty(img.height, img.width * channels);
+
+    let acc_m = get_mat_acc(m);
+    let acc_img = bitcast[&[u8]](img.buf.data);
+
+    for y in range(0, img.height) {
+        for x in range(0, img.width) {
+            for c in range(0, channels) {
+                acc_m.write(y, channels * x + c, acc_img((y * img.width + x) * channels + c) as f32 * (1.0f / 255.0f));
+            }
+        }
+    }
+    m
+}
+
+fn make_image_from_matrix(m: Matrix, channels: i32) -> Image {
+    let height = m.rows;
+    let width = m.cols / channels;
+    let buf = alloc(0, (m.rows * m.cols) as i64);
+
+    let acc_m = get_mat_acc(m);
+    let acc_img = bitcast[&mut[u8]](buf.data);
+
+    for y in range(0, height) {
+        for x in range(0, width) {
+            for c in range(0, channels) {
+                acc_img((y * width + x) * channels + c) = (acc_m.read(y, channels * x+c) * 255.0f) as u8;
+            }
+        }
+    }
+    make_image(buf, width, height)
+}
+
 fn load_png(filename: &[u8]) -> Image {
     let mut ptr;
     let mut pixel_data;
@@ -20,9 +54,9 @@ fn load_png(filename: &[u8]) -> Image {
 }
 
 fn make_interleaved(buffer: Buffer, channels: i32, width: i32, height: i32) -> Buffer {
-    let bufC = alloc(0, (width * height * channels) as i64);
-    let accC = bitcast[&mut[u8]](bufC.data);
-    let accB = bitcast[&[u8]](buffer.data);
+    let bufC = alloc(0, (4 * width * height * channels) as i64);
+    let accC = bitcast[&mut[f32]](bufC.data);
+    let accB = bitcast[&[f32]](buffer.data);
 
     for y in range(0, height) {
         for x in range(0, width) {

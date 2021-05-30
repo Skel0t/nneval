@@ -58,7 +58,7 @@ void imageTest() {
                         .0f,    .0f,    .0f,     .0,      1.f,     .0f,    .0f,    .0f,    .0f,
                         .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f};
     float kernel3[] = { .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f,
-                        .0f,    .0f,    .0f,     .0f,     .0f,     .1f,    .0f,    .0f,    .0f,
+                        .0f,    .0f,    .0f,     .0f,     .0f,     1.f,    .0f,    .0f,    .0f,
                         .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f};
     anydsl::Array<float> dsl_kernel1(sizeof(float) * 27);
     anydsl::Array<float> dsl_kernel2(sizeof(float) * 27);
