@@ -77,5 +77,5 @@ void imageTest() {
     dsl_kernel2.release();
     dsl_kernel3.release();
 
-    save_png_pointer(FilePath("out.png"), ptr, 1920 / 2, 1111 / 2);
+    save_png_pointer(FilePath("out.png"), ptr, 1920, 1110);
 }

@@ -56,27 +56,78 @@ fn conv2d(kernel: Matrix, channels: i32, img_mat: Matrix) -> Matrix {
 }
 
 // Image by channels separated RRRRRR...GGGGGG....BBBBBB
-fn max_pool(img: Image, ksize: i32, channels:i32) -> Buffer {
-    let buffer = alloc(0, (4 * img.width * img.height * channels / (ksize * ksize)) as i64);
+fn max_pool(img_mat: Matrix, ksize: i32, channels:i32) -> Matrix {
+    let buffer = alloc(0, (4 * img_mat.cols * img_mat.rows / (ksize * ksize)) as i64);
 
     let acc     = bitcast[&mut[f32]](buffer.data);
-    let img_acc = bitcast[&[f32]](img.buf.data);
+    let img_acc = bitcast[&[f32]](img_mat.buf.data);
     for i in range(0, channels) {
-        for y in range(0, img.height / 2) {
-            for x in range(0, img.width / 2) {
-                let v11 = img_acc((i * img.width * img.height) +  2*y    * img.width + 2*x);
-                let v12 = img_acc((i * img.width * img.height) +  2*y    * img.width + 2*x+1);
-                let v21 = img_acc((i * img.width * img.height) + (2*y+1) * img.width + 2*x);
-                let v22 = img_acc((i * img.width * img.height) + (2*y+1) * img.width + 2*x+1);
+        for y in range(0, img_mat.rows / 2) {
+            for x in range(0, img_mat.cols / (channels * 2)) {
+                let v11 = img_acc((i * img_mat.cols * img_mat.rows / channels) +  2*y    * img_mat.cols / channels + 2*x);
+                let v12 = img_acc((i * img_mat.cols * img_mat.rows / channels) +  2*y    * img_mat.cols / channels + 2*x+1);
+                let v21 = img_acc((i * img_mat.cols * img_mat.rows / channels) + (2*y+1) * img_mat.cols / channels + 2*x);
+                let v22 = img_acc((i * img_mat.cols * img_mat.rows / channels) + (2*y+1) * img_mat.cols / channels + 2*x+1);
 
                 let val = max(max(v11, v12), max(v21, v22));
-                acc((i * img.width * img.height / 4) + y * (img.width / 2) + x) = val;
+                acc((i * img_mat.cols * img_mat.rows / (channels * 4)) + y * (img_mat.cols / (channels * 2)) + x) = val;
             }
         }
     }
-    buffer
+    release(img_mat.buf);
+    make_matrix(buffer, img_mat.rows / 2, img_mat.cols / 2)
+}
+
+fn leaky_relu(img_mat: Matrix, channels: i32) -> Matrix {
+    let acc = get_mat_acc(img_mat);
+    for v, r, c in iterate_matrix(img_mat) {
+        acc.write(r, c, leaky_relu_x(0.01f, v));
+    }
+    img_mat
 }
 
 fn @max(x: f32, y: f32) -> f32 {
     select(x > y, x, y)
+}
+
+fn @leaky_relu_x(neg_slope: f32, x: f32) -> f32 {
+    if x >= 0.0f {
+        x
+    } else {
+        neg_slope * x
+    }
+}
+
+fn make_interleaved(img_mat: Matrix, channels: i32) -> Matrix {
+    let bufC = alloc(0, (4 * img_mat.cols * img_mat.rows) as i64);
+    let accC = bitcast[&mut[f32]](bufC.data);
+    let accB = bitcast[&[f32]](img_mat.buf.data);
+
+    for y in range(0, img_mat.rows) {
+        for x in range(0, img_mat.cols / channels) {
+            for i in range(0, channels) {
+                accC(y * img_mat.cols + x * channels + i) = accB(y * img_mat.cols / channels + x + i * img_mat.cols * img_mat.rows / channels);
+            }
+        }
+    }
+
+    release(img_mat.buf);
+    make_matrix(bufC, img_mat.rows, img_mat.cols)
+}
+
+fn nearest(img_mat: Matrix, channels: i32) -> Matrix {
+    let buffer = alloc(0, (4 * 4 * img_mat.cols * img_mat.rows) as i64);
+    let res_mat = make_matrix(buffer, img_mat.rows * 2, img_mat.cols * 2);
+    let accR = get_mat_acc(res_mat);
+    let accI = get_mat_acc(img_mat);
+
+    for y in range(0, res_mat.rows) {
+        for x in range(0, res_mat.cols / channels) {
+            for i in range(0, channels) {
+                accR.write(y, (channels * x) + i, accI.read(y / 2, channels * (x / 2) + i));
+            }
+        }
+    }
+    release(img_mat.buf);
+    res_mat
 }

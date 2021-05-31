@@ -44,7 +44,7 @@ extern fn image_kernel_test(kernel1: &Buffer, kernel2: &Buffer, kernel3: &Buffer
     let c2 = conv2d(k2, 3, img_mat);
     let c3 = conv2d(k3, 3, img_mat);
 
-    let mut buf = alloc(0, (img.width * img.height * 3 * 4) as i64);
+    let buf = alloc(0, (img.width * img.height * 3 * 4) as i64);
 
     runtime_copy(0, bitcast[&[i8]](c1.buf.data), 0i64, 0, buf.data, (0 * img.width * img.height * 4) as i64, (img.width * img.height * 4) as i64);
     runtime_copy(0, bitcast[&[i8]](c2.buf.data), 0i64, 0, buf.data, (1 * img.width * img.height * 4) as i64, (img.width * img.height * 4) as i64);
@@ -55,12 +55,13 @@ extern fn image_kernel_test(kernel1: &Buffer, kernel2: &Buffer, kernel3: &Buffer
     release(c3.buf);
     release(img_mat.buf);
 
-    buf = max_pool(make_image(buf, img.width, img.height), 2, 3);
+    let pool_mat = max_pool(make_matrix(buf, img.height, img.width * 3), 2, 3);
 
-    buf = make_interleaved(buf, 3, img.width / 2, img.height / 2);
+    let interleaved_mat = make_interleaved(pool_mat, 3);
 
-    let result_mat = make_matrix(buf, img.height / 2, img.width * 3 / 2);
-    let result_img = make_image_from_matrix(result_mat, 3);
+    let upscaled_mat = nearest(interleaved_mat, 3);
+
+    let result_img = make_image_from_matrix(upscaled_mat, 3);
 
     bitcast[&mut[u8]](result_img.buf.data)
 }
