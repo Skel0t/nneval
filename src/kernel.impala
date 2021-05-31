@@ -55,26 +55,28 @@ fn conv2d(kernel: Matrix, channels: i32, img_mat: Matrix) -> Matrix {
     reshaped
 }
 
-fn max_pool(ksize: i32, channels:i32, img: Image) -> Buffer {
-    let buffer = alloc(0, (img.width * img.height * channels / (ksize * ksize)) as i64);
+// Image by channels separated RRRRRR...GGGGGG....BBBBBB
+fn max_pool(img: Image, ksize: i32, channels:i32) -> Buffer {
+    let buffer = alloc(0, (4 * img.width * img.height * channels / (ksize * ksize)) as i64);
 
-    let acc     = bitcast[&mut[u8]](buffer.data);
-    let img_acc = bitcast[&[u8]](img.buf.data);
+    let acc     = bitcast[&mut[f32]](buffer.data);
+    let img_acc = bitcast[&[f32]](img.buf.data);
     for i in range(0, channels) {
         for y in range(0, img.height / 2) {
             for x in range(0, img.width / 2) {
-                let v11 = img_acc((i * img.width * img.height) + y     * img.width + x);
-                let v12 = img_acc((i * img.width * img.height) + y     * img.width + x+1);
-                let v21 = img_acc((i * img.width * img.height) + (y+1) * img.width + x);
-                let v22 = img_acc((i * img.width * img.height) + (y+1) * img.width + x+1);
+                let v11 = img_acc((i * img.width * img.height) +  2*y    * img.width + 2*x);
+                let v12 = img_acc((i * img.width * img.height) +  2*y    * img.width + 2*x+1);
+                let v21 = img_acc((i * img.width * img.height) + (2*y+1) * img.width + 2*x);
+                let v22 = img_acc((i * img.width * img.height) + (2*y+1) * img.width + 2*x+1);
 
-                let val = max();
+                let val = max(max(v11, v12), max(v21, v22));
+                acc((i * img.width * img.height / 4) + y * (img.width / 2) + x) = val;
             }
         }
     }
     buffer
 }
 
-fn max() -> () {
-
+fn @max(x: f32, y: f32) -> f32 {
+    select(x > y, x, y)
 }

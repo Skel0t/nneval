@@ -32,7 +32,7 @@ extern fn create_conv_test(img: &Buffer, kernel: &Buffer) -> () {
 }
 
 extern fn image_kernel_test(kernel1: &Buffer, kernel2: &Buffer, kernel3: &Buffer, img_buf: &Buffer) -> &[u8] {
-    let img = make_image(*img_buf, 1920, 1111);
+    let img = make_image(*img_buf, 1920, 1110);
 
     let img_mat = make_matrix_from_image(img, 3);
 
@@ -55,9 +55,11 @@ extern fn image_kernel_test(kernel1: &Buffer, kernel2: &Buffer, kernel3: &Buffer
     release(c3.buf);
     release(img_mat.buf);
 
-    buf = make_interleaved(buf, 3, img.width, img.height);
+    buf = max_pool(make_image(buf, img.width, img.height), 2, 3);
 
-    let result_mat = make_matrix(buf, img.height, img.width * 3);
+    buf = make_interleaved(buf, 3, img.width / 2, img.height / 2);
+
+    let result_mat = make_matrix(buf, img.height / 2, img.width * 3 / 2);
     let result_img = make_image_from_matrix(result_mat, 3);
 
     bitcast[&mut[u8]](result_img.buf.data)
