@@ -5,7 +5,7 @@ struct Image {
 }
 
 fn make_image(buf: Buffer, width: i32, height: i32) -> Image {
-    Image { buf: buf, width: width, height: height }
+    Image { buf = buf, width = width, height = height }
 }
 
 fn make_matrix_from_image(img: Image, channels: i32) -> Matrix {
@@ -17,7 +17,7 @@ fn make_matrix_from_image(img: Image, channels: i32) -> Matrix {
     for y in range(0, img.height) {
         for x in range(0, img.width) {
             for c in range(0, channels) {
-                acc_m.write(y, channels * x + c, acc_img((y * img.width + x) * channels + c) as f32 * (1.0f / 255.0f));
+                acc_m.write(y, channels * x + c, acc_img((y * img.width + x) * channels + c) as f32 * (1.0 / 255.0));
             }
         }
     }
@@ -35,23 +35,23 @@ fn make_image_from_matrix(m: Matrix, channels: i32) -> Image {
     for y in range(0, height) {
         for x in range(0, width) {
             for c in range(0, channels) {
-                acc_img((y * width + x) * channels + c) = (acc_m.read(y, channels * x+c) * 255.0f) as u8;
+                acc_img((y * width + x) * channels + c) = (acc_m.read(y, channels * x+c) * 255.0) as u8;
             }
         }
     }
     make_image(buf, width, height)
 }
 
-fn load_png(filename: &[u8]) -> Image {
-    let mut ptr;
-    let mut pixel_data;
-    let mut width;
-    let mut height;
+// fn load_png(filename: &[u8]) -> Image {
+//     let mut ptr;
+//     let mut pixel_data;
+//     let mut width;
+//     let mut height;
 
-    nn_load_png(0, filename, &mut ptr, &mut width, &mut height);
-    pixel_data.data = ptr as &[i8];
-    make_image(pixel_data, width, height)
-}
+//     nn_load_png(0, filename, &mut ptr, &mut width, &mut height);
+//     pixel_data.data = ptr as &[i8];
+//     make_image(pixel_data, width, height)
+// }
 
 // Kernel size, Channel count
 fn im2col(img: Image, ksize: i32, channels: i32, padding:i32, stride: i32) -> () {

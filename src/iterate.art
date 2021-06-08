@@ -1,0 +1,69 @@
+fn @iterate_matrix(body: fn(f32, i32, i32) -> ()) {
+	fn @loop(mat: Matrix) -> () {
+		let acc = get_mat_acc(mat);
+        for r in range(0, mat.rows) {
+            for c in range(0, mat.cols) {
+                @body(acc.read(r, c), r, c);
+            }
+        }
+	}
+
+	loop
+}
+
+fn @iterate_matrix_row(body: fn(f32, i32) -> ()) {
+	fn @loop(mat: Matrix, r: i32) -> () {
+		let acc = get_mat_acc(mat);
+        for c in range(0, mat.cols) {
+            @body(acc.read(r, c), c);
+        }
+	}
+
+	loop
+}
+
+fn @iterate_matrix_col(body: fn(f32, i32) -> ()) {
+	fn @loop(mat: Matrix, c: i32) -> () {
+		let acc = get_mat_acc(mat);
+        for r in range(0, mat.rows) {
+            @body(acc.read(r, c), r);
+        }
+	}
+
+	loop
+}
+
+fn @iterate_sparse(body: fn(f32, i32, i32, i32) -> ())  {
+	fn @loop(mat: Sparse) -> () {
+		let acc = get_sparse_acc(mat);
+        for r in range(0, mat.rows) {
+            for c in range(0, mat.cols) {
+                @body(acc.readC(r, c), acc.readI(r, c), r, c);
+            }
+        }
+	}
+
+	loop
+}
+
+fn @iterate_sparse_row(body: fn(f32, i32, i32) -> ()) {
+	fn @loop(mat: Sparse, r: i32) -> () {
+		let acc = get_sparse_acc(mat);
+        for c in range(0, mat.cols) {
+            @body(acc.readC(r, c), acc.readI(r, c), c);
+        }
+	}
+
+	loop
+}
+
+fn @iterate_sparse_col(body: fn(f32, i32, i32) -> ()) {
+	fn @loop(mat: Sparse, c: i32) -> () {
+		let acc = get_sparse_acc(mat);
+        for r in range(0, mat.rows) {
+            @body(acc.readC(r, c), acc.readI(r, c), r);
+        }
+	}
+
+	loop
+}

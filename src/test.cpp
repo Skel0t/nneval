@@ -9,28 +9,29 @@ void imageTest();
 void create_conv();
 
 int main() {
-    // imageTest();
-    auto kernel1 = read_in_weigths2("/home/woshi/Documents/nneval/network/conv1.txt", 3, 32, 5);
-    auto kernel2 = read_in_weigths2("/home/woshi/Documents/nneval/network/conv2.txt", 32, 64, 3);
-    auto kernel3 = read_in_weigths2("/home/woshi/Documents/nneval/network/conv3.txt", 64, 64, 3);
-    auto upkernel1 = read_in_weigths2("/home/woshi/Documents/nneval/network/upconv1.txt", 64, 32, 5);
-    auto kernel4 = read_in_weigths2("/home/woshi/Documents/nneval/network/conv4.txt", 32, 32, 3);
-    auto kernel5 = read_in_weigths2("/home/woshi/Documents/nneval/network/conv5.txt", 32, 32, 3);
-    auto kernel6 = read_in_weigths2("/home/woshi/Documents/nneval/network/conv6.txt", 32,  3, 3);
+    auto kernel1 = read_in_weigths2("/home/woshi/Documents/superres/src/network/conv1.txt", 3, 32, 5);
+    auto kernel2 = read_in_weigths2("/home/woshi/Documents/superres/src/network/conv2.txt", 32, 64, 3);
+    auto kernel3 = read_in_weigths2("/home/woshi/Documents/superres/src/network/conv3.txt", 64, 64, 3);
+    auto upkernel1 = read_in_weigths2("/home/woshi/Documents/superres/src/network/upconv1.txt", 64, 32, 5);
+    auto kernel4 = read_in_weigths2("/home/woshi/Documents/superres/src/network/conv4.txt", 32, 32, 3);
+    auto kernel5 = read_in_weigths2("/home/woshi/Documents/superres/src/network/conv5.txt", 32, 32, 3);
+    auto kernel6 = read_in_weigths2("/home/woshi/Documents/superres/src/network/conv6.txt", 32,  3, 3);
 
-    auto c1Bias = read_in_biases("/home/woshi/Documents/nneval/network/c1bias.txt", 32);
-    auto c2Bias = read_in_biases("/home/woshi/Documents/nneval/network/c2bias.txt", 64);
-    auto c3Bias = read_in_biases("/home/woshi/Documents/nneval/network/c3bias.txt", 64);
-    auto upc1Bias = read_in_biases("/home/woshi/Documents/nneval/network/uc1bias.txt", 32);
-    auto c4Bias = read_in_biases("/home/woshi/Documents/nneval/network/c4bias.txt", 32);
-    auto c5Bias = read_in_biases("/home/woshi/Documents/nneval/network/c5bias.txt", 32);
+    auto c1Bias = read_in_biases("/home/woshi/Documents/superres/src/network/c1bias.txt", 32);
+    auto c2Bias = read_in_biases("/home/woshi/Documents/superres/src/network/c2bias.txt", 64);
+    auto c3Bias = read_in_biases("/home/woshi/Documents/superres/src/network/c3bias.txt", 64);
+    auto upc1Bias = read_in_biases("/home/woshi/Documents/superres/src/network/uc1bias.txt", 32);
+    auto c4Bias = read_in_biases("/home/woshi/Documents/superres/src/network/c4bias.txt", 32);
+    auto c5Bias = read_in_biases("/home/woshi/Documents/superres/src/network/c5bias.txt", 32);
 
     std::cout << (*kernel1)[0]->data()[2] << std::endl;
 
     ImageRgba32 img;
-    load_png(FilePath("/home/woshi/Documents/nneval/src/mitchell.png"), img);
+    load_png(FilePath("/home/woshi/Documents/nneval/src/65010.png"), img);
 
-    sres(kernel1, kernel2, kernel3, upkernel1, kernel4, kernel5, kernel6, c1Bias, c2Bias, c3Bias, upc1Bias, c4Bias, c5Bias, c5Bias, &img.pixels);
+    auto ptr = sres(kernel1, kernel2, kernel3, upkernel1, kernel4, kernel5, kernel6, c1Bias, c2Bias, c3Bias, upc1Bias, c4Bias, c5Bias, c5Bias, &img.pixels);
+
+    save_png_pointer(FilePath("out.png"), ptr, 480, 320);
 
     return 0;
 }

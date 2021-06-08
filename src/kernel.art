@@ -4,10 +4,6 @@ fn make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i32
     let k_acc = get_mat_acc(kernel);
 
     // Not very efficient, but should be okay since this is only necessary once
-    for _v, _i, r, c in iterate_sparse(m) {
-        m_acc.write(r, c, 0.f, 0);
-    }
-
     let ksizeh_r = kernel.rows / 2;
     let ksizeh_c = kernel.cols / (2 * channels);
 
@@ -39,7 +35,7 @@ fn make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i32
 }
 
 // Image needs to be channel-interleaved (e.g. RGBRGBRGB), same for kernel weights
-fn conv2d(kernel: Matrix, channels: i32, img_mat: Matrix, bias: f32) -> Matrix {
+fn conv2d(kernel: Matrix, channels: i32, img_mat: Matrix, bias: f32, use_bias: bool) -> Matrix {
     let width = img_mat.cols / channels;
     let height = img_mat.rows;
     let m = reshape_matrix(img_mat, img_mat.rows * img_mat.cols, 1);    // Image as column-vector, interleaved column style
@@ -49,9 +45,11 @@ fn conv2d(kernel: Matrix, channels: i32, img_mat: Matrix, bias: f32) -> Matrix {
     let prod = sparse_mult(conv, m);
     let reshaped = reshape_matrix(prod, height, width);
 
-    let res_acc = get_mat_acc(reshaped);
-    for v, r, c in iterate_matrix(reshaped) {
-        res_acc.write(r, c, v + bias);
+    if use_bias {
+        let res_acc = get_mat_acc(reshaped);
+        for v, r, c in iterate_matrix(reshaped) {
+            res_acc.write(r, c, v + bias);
+        }
     }
 
     release(conv.content);
@@ -83,10 +81,10 @@ fn max_pool(img_mat: Matrix, ksize: i32, channels:i32) -> Matrix {
     make_matrix(buffer, img_mat.rows / 2, img_mat.cols / 2)
 }
 
-fn leaky_relu(img_mat: Matrix, channels: i32) -> Matrix {
+fn leaky_relu(img_mat: Matrix) -> Matrix {
     let acc = get_mat_acc(img_mat);
     for v, r, c in iterate_matrix(img_mat) {
-        acc.write(r, c, leaky_relu_x(0.01f, v));
+        acc.write(r, c, leaky_relu_x(0.01, v));
     }
     img_mat
 }
@@ -96,7 +94,7 @@ fn @max(x: f32, y: f32) -> f32 {
 }
 
 fn @leaky_relu_x(neg_slope: f32, x: f32) -> f32 {
-    if x >= 0.0f {
+    if x >= 0.0 {
         x
     } else {
         neg_slope * x
@@ -133,6 +131,5 @@ fn nearest(img_mat: Matrix, channels: i32) -> Matrix {
             }
         }
     }
-    release(img_mat.buf);
     res_mat
 }

@@ -1,11 +1,11 @@
-set(IMP_SRCS
-    nn.impala
-    image.impala
-    matrix.impala
-    interface.impala
-    output.impala
-    iterate.impala
-    kernel.impala
+set(ART_SRCS
+    nn.art
+    image.art
+    matrix.art
+    interface.art
+    output.art
+    iterate.art
+    kernel.art
 )
 
 set(NN_SRCS
@@ -21,9 +21,10 @@ set(NN_SRCS
 
 anydsl_runtime_wrap(NN_OBJS
     NAME "nn"
+    FRONTEND artic
     CLANG_FLAGS ${CLANG_FLAGS}
-    IMPALA_FLAGS --log-level info
-    FILES ${IMP_SRCS})
+    ARTIC_FLAGS --log-level info
+    FILES ${ART_SRCS})
 
 find_package(PNG REQUIRED)
 find_package(LZ4 REQUIRED)
