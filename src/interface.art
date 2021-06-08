@@ -78,10 +78,10 @@ fn image_kernel_test(kernel1: &Buffer, kernel2: &Buffer, kernel3: &Buffer, img_b
 }
 
 #[export]
-fn sres(kernels1: &&[&Buffer], kernels2: &&[&Buffer], kernels3: &&[&Buffer], upkernels1: &&[&Buffer], kernels4: &&[&Buffer], kernels5: &&[&Buffer], kernels6: &&[&Buffer],
-               biases1 : &[f32], biases2 : &[f32], biases3 : &[f32], upbiases1 : &[f32], biases4 : &[f32], biases5 : &[f32], biases6 : &[f32], img_buf: &Buffer) -> &[u8] {
+fn sres(img_buf: &Buffer, width: i32, height: i32, kernels1: &&[&Buffer], kernels2: &&[&Buffer], kernels3: &&[&Buffer], upkernels1: &&[&Buffer], kernels4: &&[&Buffer], kernels5: &&[&Buffer], kernels6: &&[&Buffer],
+               biases1 : &[f32], biases2 : &[f32], biases3 : &[f32], upbiases1 : &[f32], biases4 : &[f32], biases5 : &[f32], biases6 : &[f32]) -> &[u8] {
 
-    let img = make_image(*img_buf, 240, 160);
+    let img = make_image(*img_buf, width, height);
 
     let mut matrices1 : [Matrix * 32];
     for i in range(0, 32) {
@@ -128,7 +128,9 @@ fn sres(kernels1: &&[&Buffer], kernels2: &&[&Buffer], kernels3: &&[&Buffer], upk
     let matrixArr : &[&[Matrix]] = [&matrices1, &matrices2, &matrices3, &matrices4, &matrices5, &matrices6, &matrices7];
     let biasArr = [biases1, biases2, biases3, upbiases1, biases4, biases5, biases6];
 
-    let resImg = forward_sres(img, matrixArr, &biasArr);
+    let forward = make_sres_nn(matrixArr, &biasArr, width, height);
 
-    bitcast[&[u8]](resImg.buf.data)
+    let res = forward(img);
+
+    bitcast[&[u8]](res.buf.data)
 }
