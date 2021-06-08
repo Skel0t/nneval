@@ -10,6 +10,8 @@ set(IMP_SRCS
 
 set(NN_SRCS
     nn.h
+    nn.cpp
+    interface.h
     image.h
     file_path.h
     test.cpp

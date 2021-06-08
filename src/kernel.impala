@@ -39,7 +39,7 @@ fn make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i32
 }
 
 // Image needs to be channel-interleaved (e.g. RGBRGBRGB), same for kernel weights
-fn conv2d(kernel: Matrix, channels: i32, img_mat: Matrix) -> Matrix {
+fn conv2d(kernel: Matrix, channels: i32, img_mat: Matrix, bias: f32) -> Matrix {
     let width = img_mat.cols / channels;
     let height = img_mat.rows;
     let m = reshape_matrix(img_mat, img_mat.rows * img_mat.cols, 1);    // Image as column-vector, interleaved column style
@@ -48,6 +48,11 @@ fn conv2d(kernel: Matrix, channels: i32, img_mat: Matrix) -> Matrix {
     let conv = make_conv_matrix(kernel, width, height, channels);
     let prod = sparse_mult(conv, m);
     let reshaped = reshape_matrix(prod, height, width);
+
+    let res_acc = get_mat_acc(reshaped);
+    for v, r, c in iterate_matrix(reshaped) {
+        res_acc.write(r, c, v + bias);
+    }
 
     release(conv.content);
     release(conv.indizes);
