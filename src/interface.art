@@ -37,98 +37,57 @@ fn create_conv_test(img: &Buffer, kernel: &Buffer) -> () {
 fn image_kernel_test(kernel1: &Buffer, kernel2: &Buffer, kernel3: &Buffer, img_buf: &Buffer) -> &[u8] {
     let img = make_image(*img_buf, 1920, 1110);
 
-    // let img_mat = make_matrix_from_image(img, 3);
+    let img_mat = make_matrix_from_image(img, 3);
 
     let k1 = make_matrix(*kernel1, 3, 9);
     let k2 = make_matrix(*kernel2, 3, 9);
     let k3 = make_matrix(*kernel3, 3, 9);
 
-    // let c1 = conv2d(k1, 3, img_mat);
-    // let c2 = conv2d(k2, 3, img_mat);
-    // let c3 = conv2d(k3, 3, img_mat);
+    let c1 = convolute(k1, 3, img_mat, 4, 4, 0, false);
+    let c2 = convolute(k2, 3, img_mat, 4, 4, 0, false);
+    let c3 = convolute(k3, 3, img_mat, 4, 4, 0, false);
 
-    // let buf = alloc(0, (img.width * img.height * 3 * 4) as i64);
+    let buf = alloc(0, (img.width * img.height * 3 * 4) as i64);
 
-    // runtime_copy(0, bitcast[&[i8]](c1.buf.data), 0i64, 0, buf.data, (0 * img.width * img.height * 4) as i64, (img.width * img.height * 4) as i64);
-    // runtime_copy(0, bitcast[&[i8]](c2.buf.data), 0i64, 0, buf.data, (1 * img.width * img.height * 4) as i64, (img.width * img.height * 4) as i64);
-    // runtime_copy(0, bitcast[&[i8]](c3.buf.data), 0i64, 0, buf.data, (2 * img.width * img.height * 4) as i64, (img.width * img.height * 4) as i64);
+    runtime_copy(0, bitcast[&[i8]](c1.buf.data), 0, 0, buf.data, (0 * img.width * img.height * 4) as i64, (img.width * img.height * 4) as i64);
+    runtime_copy(0, bitcast[&[i8]](c2.buf.data), 0, 0, buf.data, (1 * img.width * img.height * 4) as i64, (img.width * img.height * 4) as i64);
+    runtime_copy(0, bitcast[&[i8]](c3.buf.data), 0, 0, buf.data, (2 * img.width * img.height * 4) as i64, (img.width * img.height * 4) as i64);
 
-    // release(c1.buf);
-    // release(c2.buf);
-    // release(c3.buf);
-    // release(img_mat.buf);
+    release(c1.buf);
+    release(c2.buf);
+    release(c3.buf);
+    release(img_mat.buf);
 
-    // let pool_mat = max_pool(make_matrix(buf, img.height, img.width * 3), 2, 3);
+    let pool_mat = max_pool(make_matrix(buf, img.height, img.width * 3), 2, 3);
 
-    // let interleaved_mat = make_interleaved(pool_mat, 3);
+    let interleaved_mat = make_interleaved(pool_mat, 3);
 
-    // let upscaled_mat = nearest(interleaved_mat, 3);
+    let upscaled_mat = nearest(interleaved_mat, 3);
 
-    // let result_img = make_image_from_matrix(upscaled_mat, 3);
-
-    let k_arr = [k1, k2, k3];
-
-    let mat_arr =[ &k_arr, &k_arr, &k_arr, &k_arr, &k_arr, &k_arr, &k_arr, &k_arr];
-    // let ftest = [0.0, 0.0, 0.0];
-    // let biases = [&ftest, &ftest];
-    // let result_img = forward(img, &mat_arr, [[0.0]]);
-
+    let result_img = make_image_from_matrix(upscaled_mat, 3);
 
     bitcast[&[u8]](img.buf.data)
 }
 
 #[export]
-fn sres(kernels1: &&[&Buffer], kernels2: &&[&Buffer], kernels3: &&[&Buffer], upkernels1: &&[&Buffer], kernels4: &&[&Buffer], kernels5: &&[&Buffer], kernels6: &&[&Buffer],
-               biases1 : &[f32], biases2 : &[f32], biases3 : &[f32], upbiases1 : &[f32], biases4 : &[f32], biases5 : &[f32], biases6 : &[f32], img_buf: &Buffer) -> &[u8] {
+fn @sres(img_buf: &Buffer, width: i32, height: i32, kernels1: &&[&Buffer], kernels2: &&[&Buffer], kernels3: &&[&Buffer], upkernels1: &&[&Buffer], kernels4: &&[&Buffer], kernels5: &&[&Buffer], kernels6: &&[&Buffer],
+               biases1 : &[f32], biases2 : &[f32], biases3 : &[f32], upbiases1 : &[f32], biases4 : &[f32], biases5 : &[f32], biases6 : &[f32]) -> &[u8] {
 
-    let img = make_image(*img_buf, 240, 160);
+    print_i32(width);
+    print_string("\t");
+    print_i32(height);
+    print_string("\n");
 
-    let mut matrices1 : [Matrix * 32];
-    for i in range(0, 32) {
-        let buf = (*kernels1)(i);
-        matrices1(i) = make_matrix(*buf, 5, 5 * 3);
-    }
+    // Why doesn't it work when i exchange 240 for width and 160 for height?
+    // The above prints even print 240 160... So it should be the same, shouldn't it?
+    let img = make_image(*img_buf, 240, 160);   
 
-    let mut matrices2 : [Matrix * 64];
-    for i in range(0, 64) {
-        let buf = (*kernels2)(i);
-        matrices2(i) = make_matrix(*buf, 3, 3 * 32);
-    }
+    let kernels_arr = [kernels1, kernels2, kernels3, upkernels1, kernels4, kernels5, kernels6];
+    let bias_arr = [biases1, biases2, biases3, upbiases1, biases4, biases5, biases6];
 
-    let mut matrices3 : [Matrix * 64];
-    for i in range(0, 64) {
-        let buf = (*kernels3)(i);
-        matrices3(i) = make_matrix(*buf, 3, 3 * 64);
-    }
+    let forward = make_sres_nn(kernels_arr, bias_arr);
 
-    let mut matrices4 : [Matrix * 32];
-    for i in range(0, 32) {
-        let buf = (*upkernels1)(i);
-        matrices4(i) = make_matrix(*buf, 5, 5 * 64);
-    }
+    let res = forward(img);
 
-    let mut matrices5 : [Matrix * 32];
-    for i in range(0, 32) {
-        let buf = (*kernels4)(i);
-        matrices5(i) = make_matrix(*buf, 3, 3 * 32);
-    }
-
-    let mut matrices6 : [Matrix * 32];
-    for i in range(0, 32) {
-        let buf = (*kernels5)(i);
-        matrices6(i) = make_matrix(*buf, 3, 3 * 32);
-    }
-
-    let mut matrices7 : [Matrix * 3];
-    for i in range(0, 3) {
-        let buf = (*kernels6)(i);
-        matrices7(i) = make_matrix(*buf, 3, 3 * 32);
-    }
-
-    let matrixArr : &[&[Matrix]] = [&matrices1, &matrices2, &matrices3, &matrices4, &matrices5, &matrices6, &matrices7];
-    let biasArr = [biases1, biases2, biases3, upbiases1, biases4, biases5, biases6];
-
-    let resImg = forward_sres(img, matrixArr, &biasArr);
-
-    bitcast[&[u8]](resImg.buf.data)
+    bitcast[&[u8]](res.buf.data)
 }
