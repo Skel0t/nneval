@@ -75,7 +75,7 @@ fn @conv2d(in_channels: i32, out_channels: i32, kernels: &[Matrix], biases: &[f3
 
 // Image by channels separated RRRRRR...GGGGGG....BBBBBB
 fn @max_pool(img_mat: Matrix, ksize: i32, channels:i32) -> Matrix {
-    let buffer = alloc(0, (4 * img_mat.cols * img_mat.rows / (ksize * ksize)) as i64);
+    let buffer = alloc(0, 4 * img_mat.cols as i64 * img_mat.rows as i64 / (ksize * ksize) as i64);
 
     let acc     = bitcast[&mut[f32]](buffer.data);
     let img_acc = bitcast[&[f32]](img_mat.buf.data);
@@ -117,7 +117,7 @@ fn @leaky_relu_x(neg_slope: f32, x: f32) -> f32 {
 }
 
 fn @make_interleaved(img_mat: Matrix, channels: i32) -> Matrix {
-    let bufC = alloc(0, (4 * img_mat.cols * img_mat.rows) as i64);
+    let bufC = alloc(0, 4 * img_mat.cols as i64 * img_mat.rows as i64);
     let accC = bitcast[&mut[f32]](bufC.data);
     let accB = bitcast[&[f32]](img_mat.buf.data);
 
@@ -134,7 +134,7 @@ fn @make_interleaved(img_mat: Matrix, channels: i32) -> Matrix {
 }
 
 fn @nearest(img_mat: Matrix, channels: i32) -> Matrix {
-    let buffer = alloc(0, (4 * 4 * img_mat.cols * img_mat.rows) as i64);
+    let buffer = alloc(0, 4 * 4 * img_mat.cols as i64 * img_mat.rows as i64);
     let res_mat = make_matrix(buffer, img_mat.rows * 2, img_mat.cols * 2);
     let accR = get_mat_acc(res_mat);
     let accI = get_mat_acc(img_mat);

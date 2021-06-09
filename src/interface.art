@@ -47,7 +47,7 @@ fn image_kernel_test(kernel1: &Buffer, kernel2: &Buffer, kernel3: &Buffer, img_b
     let c2 = convolute(k2, 3, img_mat, 4, 4, 0, false);
     let c3 = convolute(k3, 3, img_mat, 4, 4, 0, false);
 
-    let buf = alloc(0, (img.width * img.height * 3 * 4) as i64);
+    let buf = alloc(0, img.width as i64 * img.height as i64 * 3 * 4);
 
     runtime_copy(0, bitcast[&[i8]](c1.buf.data), 0, 0, buf.data, (0 * img.width * img.height * 4) as i64, (img.width * img.height * 4) as i64);
     runtime_copy(0, bitcast[&[i8]](c2.buf.data), 0, 0, buf.data, (1 * img.width * img.height * 4) as i64, (img.width * img.height * 4) as i64);
@@ -80,13 +80,14 @@ fn @sres(img_buf: &Buffer, width: i32, height: i32, kernels1: &&[&Buffer], kerne
 
     // Why doesn't it work when i exchange 240 for width and 160 for height?
     // The above prints even print 240 160... So it should be the same, shouldn't it?
-    let img = make_image(*img_buf, 240, 160);   
+    let img = make_image(*img_buf, 1920, 1110);   
 
     let kernels_arr = [kernels1, kernels2, kernels3, upkernels1, kernels4, kernels5, kernels6];
     let bias_arr = [biases1, biases2, biases3, upbiases1, biases4, biases5, biases6];
 
+    print_string("piep\n");
     let forward = make_sres_nn(kernels_arr, bias_arr);
-
+    print_string("piep\n");
     let res = forward(img);
 
     bitcast[&[u8]](res.buf.data)

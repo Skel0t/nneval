@@ -16,7 +16,6 @@ set(NN_SRCS
     file_path.h
     test.cpp
     image.cpp
-    interface.cpp
 )
 
 anydsl_runtime_wrap(NN_OBJS
