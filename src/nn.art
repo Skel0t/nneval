@@ -23,7 +23,7 @@ fn @make_sres_nn(kernels_arr: &[&&[&Buffer]], biases: &[&[f32]]) -> fn(Image) ->
     }
 
     let mut matrices2 : [Matrix * 64];
-    for i in range(0, 64) {        
+    for i in range(0, 64) {
         let buf = (*kernels_arr(1))(i);
         matrices2(i) = make_matrix(*buf, 3, 3 * 32);
     }
@@ -35,7 +35,7 @@ fn @make_sres_nn(kernels_arr: &[&&[&Buffer]], biases: &[&[f32]]) -> fn(Image) ->
     }
 
     let mut matrices4 : [Matrix * 32];
-    for i in range(0, 32) {        
+    for i in range(0, 32) {
         let buf = (*kernels_arr(3))(i);
         matrices4(i) = make_matrix(*buf, 5, 5 * 64);
     }
@@ -63,68 +63,68 @@ fn @make_sres_nn(kernels_arr: &[&&[&Buffer]], biases: &[&[f32]]) -> fn(Image) ->
     fn @forward_sres(img: Image) -> Image {
         let mut img_mat = make_matrix_from_image(img, in_channels_1);
         let nearest_img = nearest(img_mat, in_channels_1);
-    
+
         // Convolution 1
         img_mat = conv2d(in_channels_1, out_channels_1, kernels(0), biases(0), img_mat, true);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_1);
-    
+
         print_string("conv1 done\n");
-    
+
         // Convolution 2
         img_mat = conv2d(in_channels_2, out_channels_2, kernels(1), biases(1), img_mat, true);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_2);
-    
+
         print_string("conv2 done\n");
-    
+
         // Convolution 3
         img_mat = conv2d(in_channels_3, out_channels_3, kernels(2), biases(2), img_mat, true);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_3);
-    
+
         let up = nearest(img_mat, out_channels_3);
         release(img_mat.buf);
         img_mat = up;
-    
+
         print_string("conv3 done\n");
-    
+
         // Upconvolution 1 (Conv 4)
         img_mat = conv2d(in_channels_4, out_channels_4, kernels(3), biases(3), img_mat, true);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_4);
-    
+
         print_string("conv4 (upconv) done\n");
-    
+
         // Convolution 5
         img_mat = conv2d(in_channels_5, out_channels_5, kernels(4), biases(4), img_mat, true);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_5);
-    
+
         print_string("conv5 done\n");
-    
+
         // Convolution 6
         img_mat = conv2d(in_channels_6, out_channels_6, kernels(5), biases(5), img_mat, true);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_6);
-    
+
         print_string("conv6 done\n");
-    
+
         // Convolution 7
         img_mat = conv2d(in_channels_7, out_channels_7, kernels(6), biases(0), img_mat, false);
         img_mat = make_interleaved(img_mat, out_channels_7);
-    
+
         print_string("conv7 done\n");
-    
+
         // Add residual image to upscaled one
         let res_mat = add_elem_wise(img_mat, nearest_img);
         release(img_mat.buf);
         release(nearest_img.buf);
-    
+
         // RETURN
         let result_img = make_image_from_matrix(res_mat, out_channels_7);
         result_img
     }
-    
+
     forward_sres
 }

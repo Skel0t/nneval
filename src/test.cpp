@@ -10,7 +10,7 @@ void create_conv();
 void superres(std::string path, int width, int height);
 
 int main() {
-    superres("/home/woshi/Documents/nneval/build/mitchell.png", 1920, 1110);    
+    superres("/home/woshi/Documents/nneval/src/img_077.png", 1024, 680);
     return 0;
 }
 

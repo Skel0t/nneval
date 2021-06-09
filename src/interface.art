@@ -1,7 +1,3 @@
-// extern "C" {
-//     fn nn_load_png(i32, &[u8], &mut &[u8], &mut i32, &mut i32) -> ();
-// }
-
 #[export]
 fn sparse_mult_test(cnt: &Buffer, idz: &Buffer, buf: &Buffer) -> () {
     let m = make_sparse(*cnt, *idz, 2, 2);
@@ -66,7 +62,7 @@ fn image_kernel_test(kernel1: &Buffer, kernel2: &Buffer, kernel3: &Buffer, img_b
 
     let result_img = make_image_from_matrix(upscaled_mat, 3);
 
-    bitcast[&[u8]](img.buf.data)
+    bitcast[&[u8]](result_img.buf.data)
 }
 
 #[export]
@@ -80,7 +76,7 @@ fn @sres(img_buf: &Buffer, width: i32, height: i32, kernels1: &&[&Buffer], kerne
 
     // Why doesn't it work when i exchange 240 for width and 160 for height?
     // The above prints even print 240 160... So it should be the same, shouldn't it?
-    let img = make_image(*img_buf, 1920, 1110);   
+    let img = make_image(*img_buf, 1024, 680);
 
     let kernels_arr = [kernels1, kernels2, kernels3, upkernels1, kernels4, kernels5, kernels6];
     let bias_arr = [biases1, biases2, biases3, upbiases1, biases4, biases5, biases6];
