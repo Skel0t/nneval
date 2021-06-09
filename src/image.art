@@ -4,11 +4,12 @@ struct Image {
     height : i32
 }
 
-fn make_image(buf: Buffer, width: i32, height: i32) -> Image {
+fn @make_image(buf: Buffer, width: i32, height: i32) -> Image {
     Image { buf = buf, width = width, height = height }
 }
 
-fn make_matrix_from_image(img: Image, channels: i32) -> Matrix {
+// Divides all uint8 in the image to create a [0-1] float Matrix
+fn @make_matrix_from_image(img: Image, channels: i32) -> Matrix {
     let m = make_matrix_empty(img.height, img.width * channels);
 
     let acc_m = get_mat_acc(m);
@@ -24,7 +25,8 @@ fn make_matrix_from_image(img: Image, channels: i32) -> Matrix {
     m
 }
 
-fn make_image_from_matrix(m: Matrix, channels: i32) -> Image {
+// Multiplies all floats in the matrix by 255 to return an 8-bit image
+fn @make_image_from_matrix(m: Matrix, channels: i32) -> Image {
     let height = m.rows;
     let width = m.cols / channels;
     let buf = alloc(0, (m.rows * m.cols) as i64);
@@ -42,19 +44,8 @@ fn make_image_from_matrix(m: Matrix, channels: i32) -> Image {
     make_image(buf, width, height)
 }
 
-// fn load_png(filename: &[u8]) -> Image {
-//     let mut ptr;
-//     let mut pixel_data;
-//     let mut width;
-//     let mut height;
-
-//     nn_load_png(0, filename, &mut ptr, &mut width, &mut height);
-//     pixel_data.data = ptr as &[i8];
-//     make_image(pixel_data, width, height)
-// }
-
 // Kernel size, Channel count
-fn im2col(img: Image, ksize: i32, channels: i32, padding:i32, stride: i32) -> () {
+fn @im2col(img: Image, ksize: i32, channels: i32, padding:i32, stride: i32) -> () {
     // TODO: Do I need this? Shouldn't I just use sparse matrices for the weights?
     // Well then I need <newlayer-depth> many matrix multiplications, like this only one would be necessary
 }

@@ -1,305 +1,130 @@
-fn forward(img: Image, kernels: &[&[Matrix]], biases: &[&[f32]]) -> Image {
-    let mut img_mat = make_matrix_from_image(img, 3);
-
-    // ENCODING
-
-    // Convolution 1
-    let in_channels_1  = 3;
-    let out_channels_1 = 3;
-    let kernel_size_1  = 3;
-    let conv_buffer_1  = alloc(0, (4 * img.width * img.height * out_channels_1) as i64);
-    let pool_size_1    = 2;
-
-    let kernel_1 = kernels(0);
-    for i in range(0, out_channels_1) {
-        let conv_mat = convolute(kernel_1(i), in_channels_1, img_mat, biases(0)(i), true);
-        let buf_off  = (i * img.width * img.height * 4) as i64;
-        runtime_copy(0, bitcast[&[i8]](conv_mat.buf.data), 0, 0, conv_buffer_1.data, buf_off, (img.width * img.height * 4) as i64);
-        release(conv_mat.buf);
-    }
-
-    release(img_mat.buf);
-    img_mat = make_matrix(conv_buffer_1, img.height, img.width * out_channels_1);
-
-    leaky_relu(img_mat);
-
-    img_mat = max_pool(img_mat, pool_size_1, out_channels_1);
-    img_mat = make_interleaved(img_mat, out_channels_1);
-
-    // Convolution 2
-    let in_channels_2  = out_channels_1;
-    let out_channels_2 = 3;
-    let kernel_size_2  = 3;
-    let conv_buffer_2  = alloc(0, (4 * img.width * img.height * out_channels_2) as i64);
-    let pool_size_2    = 2;
-
-    let kernel_2 = kernels(1);
-    for i in range(0, out_channels_2) {
-        let conv_mat = convolute(kernel_2(i), in_channels_2, img_mat, biases(1)(i), true);
-        let buf_off  = (i * img.width * img.height * 4) as i64;
-        runtime_copy(0, bitcast[&[i8]](conv_mat.buf.data), 0, 0, conv_buffer_2.data, buf_off, (img.width * img.height * 4) as i64);
-        release(conv_mat.buf);
-    }
-
-    release(img_mat.buf);
-    img_mat = make_matrix(conv_buffer_2, img.height, img.width * out_channels_2);
-
-    leaky_relu(img_mat);
-
-    img_mat = max_pool(img_mat, pool_size_2, out_channels_2);
-    img_mat = make_interleaved(img_mat, out_channels_2);
-
-    // Convolution 3
-    let in_channels_3  = out_channels_2;
-    let out_channels_3 = 3;
-    let kernel_size_3  = 3;
-    let conv_buffer_3  = alloc(0, (4 * img.width * img.height * out_channels_3) as i64);
-
-    let kernel_3 = kernels(2);
-    for i in range(0, out_channels_3) {
-        let conv_mat = convolute(kernel_3(i), in_channels_3, img_mat, biases(2)(i), true);
-        let buf_off  = (i * img.width * img.height * 4) as i64;
-        runtime_copy(0, bitcast[&[i8]](conv_mat.buf.data), 0, 0, conv_buffer_3.data, buf_off, (img.width * img.height * 4) as i64);
-        release(conv_mat.buf);
-    }
-
-    release(img_mat.buf);
-    img_mat = make_matrix(conv_buffer_3, img.height, img.width * out_channels_3);
-
-    leaky_relu(img_mat);
-
-    img_mat = make_interleaved(img_mat, out_channels_3);
-
-    // Convolution 4
-    let in_channels_4  = out_channels_3;
-    let out_channels_4 = 3;
-    let kernel_size_4  = 3;
-    let conv_buffer_4  = alloc(0, (4 * img.width * img.height * out_channels_4) as i64);
-
-    let kernel_4 = kernels(3);
-    for i in range(0, out_channels_4) {
-        let conv_mat = convolute(kernel_4(i), in_channels_4, img_mat, biases(3)(i), true);
-        let buf_off  = (i * img.width * img.height * 4) as i64;
-        runtime_copy(0, bitcast[&[i8]](conv_mat.buf.data), 0, 0, conv_buffer_4.data, buf_off, (img.width * img.height * 4) as i64);
-        release(conv_mat.buf);
-    }
-
-    release(img_mat.buf);
-    img_mat = make_matrix(conv_buffer_4, img.height, img.width * out_channels_4);
-    img_mat = make_interleaved(img_mat, out_channels_4);
-
-
-    // DECODING
-
-    // Convolution 5
-    let in_channels_5  = out_channels_4;
-    let out_channels_5 = 3;
-    let kernel_size_5  = 3;
-    let conv_buffer_5  = alloc(0, (4 * img.width * img.height * out_channels_5) as i64);
-
-    let kernel_5 = kernels(4);
-    for i in range(0, out_channels_5) {
-        let conv_mat = convolute(kernel_5(i), in_channels_5, img_mat, biases(4)(i), true);
-        let buf_off  = (i * img.width * img.height * 4) as i64;
-        runtime_copy(0, bitcast[&[i8]](conv_mat.buf.data), 0, 0, conv_buffer_5.data, buf_off, (img.width * img.height * 4) as i64);
-        release(conv_mat.buf);
-    }
-
-    release(img_mat.buf);
-    img_mat = make_matrix(conv_buffer_5, img.height, img.width * out_channels_5);
-
-    leaky_relu(img_mat);
-
-    img_mat = make_interleaved(img_mat, out_channels_5);
-    img_mat = nearest(img_mat, out_channels_5);
-
-    // Convolution 6
-    let in_channels_6  = out_channels_5;
-    let out_channels_6 = 3;
-    let kernel_size_6  = 3;
-    let conv_buffer_6  = alloc(0, (4 * img.width * img.height * out_channels_6) as i64);
-
-    let kernel_6 = kernels(5);
-    for i in range(0, out_channels_6) {
-        let conv_mat = convolute(kernel_6(i), in_channels_6, img_mat, biases(5)(i), true);
-        let buf_off  = (i * img.width * img.height * 4) as i64;
-        runtime_copy(0, bitcast[&[i8]](conv_mat.buf.data), 0, 0, conv_buffer_6.data, buf_off, (img.width * img.height * 4) as i64);
-        release(conv_mat.buf);
-    }
-
-    release(img_mat.buf);
-    img_mat = make_matrix(conv_buffer_6, img.height, img.width * out_channels_6);
-
-    leaky_relu(img_mat);
-
-    img_mat = make_interleaved(img_mat, out_channels_6);
-    img_mat = nearest(img_mat, out_channels_6);
-
-    // Convolution 7
-    let in_channels_7  = out_channels_6;
-    let out_channels_7 = 3;
-    let kernel_size_7  = 3;
-    let conv_buffer_7  = alloc(0, (4 * img.width * img.height * out_channels_7) as i64);
-
-    let kernel_7 = kernels(6);
-    for i in range(0, out_channels_7) {
-        let conv_mat = convolute(kernel_7(i), in_channels_7, img_mat, biases(6)(i), true);
-        let buf_off  = (i * img.width * img.height * 4) as i64;
-        runtime_copy(0, bitcast[&[i8]](conv_mat.buf.data), 0, 0, conv_buffer_7.data, buf_off, (img.width * img.height * 4) as i64);
-        release(conv_mat.buf);
-    }
-
-    release(img_mat.buf);
-    img_mat = make_matrix(conv_buffer_7, img.height, img.width * out_channels_7);
-
-    leaky_relu(img_mat);
-
-    img_mat = make_interleaved(img_mat, out_channels_7);
-
-    // Convolution 8
-    let in_channels_8  = out_channels_7;
-    let out_channels_8 = 3;
-    let kernel_size_8  = 3;
-    let conv_buffer_8  = alloc(0, (4 * img.width * img.height * out_channels_8) as i64);
-
-    let kernel_8 = kernels(7);
-    for i in range(0, out_channels_8) {
-        let conv_mat = convolute(kernel_8(i), in_channels_8, img_mat, biases(7)(i), true);
-        let buf_off  = (i * img.width * img.height * 4) as i64;
-        runtime_copy(0, bitcast[&[i8]](conv_mat.buf.data), 0, 0, conv_buffer_8.data, buf_off, (img.width * img.height * 4) as i64);
-        release(conv_mat.buf);
-    }
-
-    release(img_mat.buf);
-    img_mat = make_matrix(conv_buffer_8, img.height, img.width * out_channels_8);
-
-    img_mat = make_interleaved(img_mat, out_channels_8);
-
-    // RETURN
-    let result_img = make_image_from_matrix(img_mat, out_channels_8);
-    result_img
-}
-
-fn @make_conv_matrices(in_channels: i32, out_channels: i32, kernels: &[Matrix], img_width: i32, img_height: i32) -> &[Sparse] {
-    let conv_matrices : &mut[Sparse * 64];
-
-    for i in range(0, 32) {
-        let sparse = make_conv_matrix(kernels(i), img_width, img_height, in_channels);
-        conv_matrices(i) = sparse;
-    }
-
-    conv_matrices
-}
-
-// 3 LR -> 32 LR -> 64 LR -> (upNN) 64 LR -> 32 LR -> 32 LR -> 3 NB = Residual Image (+ upNN)
-fn @make_sres_nn(kernels: &[&[Matrix]], biases: &[&[f32]], width: i32, height: i32) -> fn(Image) -> Image {
-    // Set up in/out channels
+fn @make_sres_nn(kernels_arr: &[&&[&Buffer]], biases: &[&[f32]]) -> fn(Image) -> Image {
+    // Create in/out channels
     let in_channels_1  = 3;
     let out_channels_1 = 32;
-
     let in_channels_2  = out_channels_1;
     let out_channels_2 = 64;
-
     let in_channels_3  = out_channels_2;
     let out_channels_3 = 64;
-
     let in_channels_4  = out_channels_3;
     let out_channels_4 = 32;
-
     let in_channels_5  = out_channels_4;
     let out_channels_5 = 32;
-
     let in_channels_6  = out_channels_5;
     let out_channels_6 = 32;
-
     let in_channels_7  = out_channels_6;
     let out_channels_7 = 3;
 
+    // Create kernel matrices
+    let mut matrices1 : [Matrix * 32];
+    for i in range(0, 32) {
+        let buf = (*kernels_arr(0))(i);
+        matrices1(i) = make_matrix(*buf, 5, 5 * 3);
+    }
 
+    let mut matrices2 : [Matrix * 64];
+    for i in range(0, 64) {        
+        let buf = (*kernels_arr(1))(i);
+        matrices2(i) = make_matrix(*buf, 3, 3 * 32);
+    }
 
-    // Create Convolution Matrices
-    let mut img_width  = width;
-    let mut img_height = height;
+    let mut matrices3 : [Matrix * 64];
+    for i in range(0, 64) {
+        let buf = (*kernels_arr(2))(i);
+        matrices3(i) = make_matrix(*buf, 3, 3 * 64);
+    }
 
-    let conv_mat1 = make_conv_matrices(in_channels_1, out_channels_1, kernels(0), img_width, img_height);
-    let conv_mat2 = make_conv_matrices(in_channels_2, out_channels_2, kernels(1), img_width, img_height);
-    let conv_mat3 = make_conv_matrices(in_channels_3, out_channels_3, kernels(2), img_width, img_height);
+    let mut matrices4 : [Matrix * 32];
+    for i in range(0, 32) {        
+        let buf = (*kernels_arr(3))(i);
+        matrices4(i) = make_matrix(*buf, 5, 5 * 64);
+    }
 
-    img_width  = 2 * img_width;
-    img_height = 2 * img_height;
+    let mut matrices5 : [Matrix * 32];
+    for i in range(0, 32) {
+        let buf = (*kernels_arr(4))(i);
+        matrices5(i) = make_matrix(*buf, 3, 3 * 32);
+    }
 
-    let conv_mat4 = make_conv_matrices(in_channels_4, out_channels_4, kernels(3), img_width, img_height);
-    let conv_mat5 = make_conv_matrices(in_channels_5, out_channels_5, kernels(4), img_width, img_height);
-    let conv_mat6 = make_conv_matrices(in_channels_6, out_channels_6, kernels(5), img_width, img_height);
-    let conv_mat7 = make_conv_matrices(in_channels_7, out_channels_7, kernels(6), img_width, img_height);
+    let mut matrices6 : [Matrix * 32];
+    for i in range(0, 32) {
+        let buf = (*kernels_arr(5))(i);
+        matrices6(i) = make_matrix(*buf, 3, 3 * 32);
+    }
 
+    let mut matrices7 : [Matrix * 3];
+    for i in range(0, 3) {
+        let buf = (*kernels_arr(6))(i);
+        matrices7(i) = make_matrix(*buf, 3, 3 * 32);
+    }
 
+    let kernels : &[&[Matrix] * 7]= [&matrices1, &matrices2, &matrices3, &matrices4, &matrices5, &matrices6, &matrices7];
 
     fn @forward_sres(img: Image) -> Image {
-        let mut img_mat = make_matrix_from_image(img, 3);
-        let nearest_img = nearest(img_mat, 3);
-
+        let mut img_mat = make_matrix_from_image(img, in_channels_1);
+        let nearest_img = nearest(img_mat, in_channels_1);
+    
         // Convolution 1
-        img_mat = conv2d(in_channels_1, out_channels_1, conv_mat1, biases(0), img_mat, true);
+        img_mat = conv2d(in_channels_1, out_channels_1, kernels(0), biases(0), img_mat, true);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_1);
-
+    
         print_string("conv1 done\n");
-
+    
         // Convolution 2
-        img_mat = conv2d(in_channels_2, out_channels_2, conv_mat2, biases(1), img_mat, true);
+        img_mat = conv2d(in_channels_2, out_channels_2, kernels(1), biases(1), img_mat, true);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_2);
-
+    
         print_string("conv2 done\n");
-
+    
         // Convolution 3
-        img_mat = conv2d(in_channels_3, out_channels_3, conv_mat3, biases(2), img_mat, true);
+        img_mat = conv2d(in_channels_3, out_channels_3, kernels(2), biases(2), img_mat, true);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_3);
-
+    
         let up = nearest(img_mat, out_channels_3);
         release(img_mat.buf);
         img_mat = up;
-
+    
         print_string("conv3 done\n");
-
+    
         // Upconvolution 1 (Conv 4)
-        img_mat = conv2d(in_channels_4, out_channels_4, conv_mat4, biases(3), img_mat, true);
+        img_mat = conv2d(in_channels_4, out_channels_4, kernels(3), biases(3), img_mat, true);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_4);
-
+    
         print_string("conv4 (upconv) done\n");
-
+    
         // Convolution 5
-        img_mat = conv2d(in_channels_5, out_channels_5, conv_mat5, biases(4), img_mat, true);
+        img_mat = conv2d(in_channels_5, out_channels_5, kernels(4), biases(4), img_mat, true);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_5);
-
+    
         print_string("conv5 done\n");
-
+    
         // Convolution 6
-        img_mat = conv2d(in_channels_6, out_channels_6, conv_mat6, biases(5), img_mat, true);
+        img_mat = conv2d(in_channels_6, out_channels_6, kernels(5), biases(5), img_mat, true);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_6);
-
+    
         print_string("conv6 done\n");
-
+    
         // Convolution 7
-        img_mat = conv2d(in_channels_7, out_channels_7, conv_mat7, biases(0), img_mat, false);
+        img_mat = conv2d(in_channels_7, out_channels_7, kernels(6), biases(0), img_mat, false);
         img_mat = make_interleaved(img_mat, out_channels_7);
-
+    
         print_string("conv7 done\n");
-
+    
         // Add residual image to upscaled one
         let res_mat = add_elem_wise(img_mat, nearest_img);
         release(img_mat.buf);
         release(nearest_img.buf);
-
+    
         // RETURN
         let result_img = make_image_from_matrix(res_mat, out_channels_7);
         result_img
     }
-
+    
     forward_sres
 }

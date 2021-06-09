@@ -7,15 +7,14 @@
 void sparseMult();
 void imageTest();
 void create_conv();
-void superres_forward(std::string path, int width, int height);
+void superres(std::string path, int width, int height);
 
 int main() {
-    superres_forward("/home/woshi/Documents/nneval/src/65010.png", 240, 160);
-
+    superres("/home/woshi/Documents/nneval/src/65010.png", 240, 160);    
     return 0;
 }
 
-void superres_forward(std::string path, int width, int height) {
+void superres(std::string path, int width, int height) {
     auto kernel1 = read_in_weigths2("/home/woshi/Documents/superres/src/network/conv1.txt", 3, 32, 5);
     auto kernel2 = read_in_weigths2("/home/woshi/Documents/superres/src/network/conv2.txt", 32, 64, 3);
     auto kernel3 = read_in_weigths2("/home/woshi/Documents/superres/src/network/conv3.txt", 64, 64, 3);
@@ -37,6 +36,7 @@ void superres_forward(std::string path, int width, int height) {
     auto ptr = sres(&img.pixels, width, height, kernel1, kernel2, kernel3, upkernel1, kernel4, kernel5, kernel6, c1Bias, c2Bias, c3Bias, upc1Bias, c4Bias, c5Bias, c5Bias);
 
     save_png_pointer(FilePath("out.png"), ptr, width * 2, height * 2);
+
 }
 
 void create_conv() {
