@@ -1,3 +1,4 @@
+// Tupel zurückgeben funktion & speicher den ich brauche. Signatur forward nimmt auch buffer für temporären speicher
 fn @make_sres_nn(kernels_arr: &[&&[&Buffer]], biases: &[&[f32]]) -> fn(Image) -> Image {
     // Create in/out channels
     let in_channels_1  = 3;
@@ -34,6 +35,7 @@ fn @make_sres_nn(kernels_arr: &[&&[&Buffer]], biases: &[&[f32]]) -> fn(Image) ->
         matrices3(i) = make_matrix(*buf, 3, 3 * 64);
     }
 
+    // Higher order function instead of this loop, see teams
     let mut matrices4 : [Matrix * 32];
     for i in range(0, 32) {
         let buf = (*kernels_arr(3))(i);
@@ -58,6 +60,9 @@ fn @make_sres_nn(kernels_arr: &[&&[&Buffer]], biases: &[&[f32]]) -> fn(Image) ->
         matrices7(i) = make_matrix(*buf, 3, 3 * 32);
     }
 
+    // Speicher hier daklarieren und für forward_sres bereitstellen
+
+    // Ersetzen durch match statement/Entfernen probably einfach
     let kernels : &[&[Matrix] * 7]= [&matrices1, &matrices2, &matrices3, &matrices4, &matrices5, &matrices6, &matrices7];
 
     fn @forward_sres(img: Image) -> Image {

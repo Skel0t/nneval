@@ -12,20 +12,17 @@ fn @make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i3
     for j in range(0, im_height) {
         for i in range(0, im_width) {
             let s_row = j * im_width + i;
-            for r in range(-ksizeh_r, ksizeh_r+1) {
+            for r in unroll(-ksizeh_r, ksizeh_r+1) {
                 let im_row = j + r;
                 if im_row < 0 || im_row >= im_height { continue() } // padding with 0s s.t. image size at start and end is the same
-                for c in range(-ksizeh_c, ksizeh_c+1) {
-                    let mut im_col = (i + c) * channels;
+                for c in unroll(-ksizeh_c, ksizeh_c+1) {
+                    let im_col = (i + c) * channels;
                     if im_col < 0 || im_col >= stride_y { continue() } // padding with 0s s.t. image size at start and end is the same
                     let k_row = r + ksizeh_r;
-                    let mut k_col = (c + ksizeh_c) * channels;
-                    let mut s_col = k_row * kernel.cols + k_col;
-                    for _channel in range(0, channels) {
-                        m_acc.write(s_row, s_col, k_acc.read(k_row, k_col), im_row * stride_y + im_col);
-                        im_col++;
-                        k_col++;
-                        s_col++;
+                    let k_col = (c + ksizeh_c) * channels;
+                    let s_col = k_row * kernel.cols + k_col;
+                    for channel in unroll(0, channels) {
+                        m_acc.write(s_row, s_col + channel, k_acc.read(k_row, k_col + channel), im_row * stride_y + im_col + channel);
                     }
                 }
             }
@@ -33,6 +30,8 @@ fn @make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i3
     }
     m
 }
+// Accessor für matrix mit channel machen, um
+
 
 // Image needs to be channel-interleaved (e.g. RGBRGBRGB), same for kernel weights
 fn @convolute(kernel: Matrix, channels: i32, img_mat: Matrix, width: i32, height: i32, bias: f32, use_bias: bool) -> Matrix {
@@ -55,14 +54,15 @@ fn @convolute(kernel: Matrix, channels: i32, img_mat: Matrix, width: i32, height
     reshaped
 }
 
+// statt array matrizen fn(i32) -> Matrix, same for bias
 fn @conv2d(in_channels: i32, out_channels: i32, kernels: &[Matrix], biases: &[f32], img_mat: Matrix, use_bias: bool) -> Matrix {
     let width  = img_mat.cols / in_channels;
     let height = img_mat.rows;
-    
+
     let copy_size  = width as i64 * height as i64 * 4;
     let conv_buffer = alloc(0, copy_size * out_channels as i64);
 
-    for i in range(0, out_channels) {
+    for i in unroll(0, out_channels) {
         let conv_mat = convolute(kernels(i), in_channels, img_mat, width, height, biases(i), use_bias);
         let buf_off  = i as i64 * copy_size;
         runtime_copy(0, bitcast[&[i8]](conv_mat.buf.data), 0, 0, conv_buffer.data, buf_off, copy_size);
@@ -79,7 +79,7 @@ fn @max_pool(img_mat: Matrix, ksize: i32, channels:i32) -> Matrix {
 
     let acc     = bitcast[&mut[f32]](buffer.data);
     let img_acc = bitcast[&[f32]](img_mat.buf.data);
-    for i in range(0, channels) {
+    for i in unroll(0, channels) {
         for y in range(0, img_mat.rows / 2) {
             for x in range(0, img_mat.cols / (channels * 2)) {
                 let v11 = img_acc((i * img_mat.cols * img_mat.rows / channels) +  2*y    * img_mat.cols / channels + 2*x);
@@ -123,7 +123,7 @@ fn @make_interleaved(img_mat: Matrix, channels: i32) -> Matrix {
 
     for y in range(0, img_mat.rows) {
         for x in range(0, img_mat.cols / channels) {
-            for i in range(0, channels) {
+            for i in unroll(0, channels) {
                 accC(y * img_mat.cols + x * channels + i) = accB(y * img_mat.cols / channels + x + i * img_mat.cols * img_mat.rows / channels);
             }
         }
@@ -141,7 +141,7 @@ fn @nearest(img_mat: Matrix, channels: i32) -> Matrix {
 
     for y in range(0, res_mat.rows) {
         for x in range(0, res_mat.cols / channels) {
-            for i in range(0, channels) {
+            for i in unroll(0, channels) {
                 accR.write(y, (channels * x) + i, accI.read(y / 2, channels * (x / 2) + i));
             }
         }

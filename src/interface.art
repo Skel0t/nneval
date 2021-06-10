@@ -68,7 +68,7 @@ fn image_kernel_test(kernel1: &Buffer, kernel2: &Buffer, kernel3: &Buffer, img_b
 #[export]
 fn @sres(img_buf: &Buffer, width: i32, height: i32, kernels1: &&[&Buffer], kernels2: &&[&Buffer], kernels3: &&[&Buffer], upkernels1: &&[&Buffer], kernels4: &&[&Buffer], kernels5: &&[&Buffer], kernels6: &&[&Buffer],
                biases1 : &[f32], biases2 : &[f32], biases3 : &[f32], upbiases1 : &[f32], biases4 : &[f32], biases5 : &[f32], biases6 : &[f32]) -> &[u8] {
-
+// out_buf mitgeben
     print_i32(width);
     print_string("\t");
     print_i32(height);
@@ -76,14 +76,12 @@ fn @sres(img_buf: &Buffer, width: i32, height: i32, kernels1: &&[&Buffer], kerne
 
     // Why doesn't it work when i exchange 240 for width and 160 for height?
     // The above prints even print 240 160... So it should be the same, shouldn't it?
-    let img = make_image(*img_buf, 1024, 680);
+    let img = make_image(*img_buf, 1024, 764);
 
     let kernels_arr = [kernels1, kernels2, kernels3, upkernels1, kernels4, kernels5, kernels6];
     let bias_arr = [biases1, biases2, biases3, upbiases1, biases4, biases5, biases6];
 
-    print_string("piep\n");
     let forward = make_sres_nn(kernels_arr, bias_arr);
-    print_string("piep\n");
     let res = forward(img);
 
     bitcast[&[u8]](res.buf.data)
