@@ -1,5 +1,6 @@
 struct Matrix {
     buf : Buffer,
+    offset : i32,
     rows : i32,
     cols : i32
 }
@@ -22,19 +23,19 @@ struct AccS {
     write : fn(i32, i32, f32, i32) -> ()
 }
 
-fn @make_matrix(buffer: Buffer, rows: i32, cols: i32) -> Matrix {
-    Matrix { buf = buffer, rows = rows, cols = cols }
+fn @make_matrix(buffer: Buffer, offset: i32, rows: i32, cols: i32) -> Matrix {
+    Matrix { buf = buffer, offset = offset, rows = rows, cols = cols }
 }
 
 fn @make_matrix_empty(rows: i32, cols: i32) -> Matrix {
     let size = 4 * cols as i64 * rows as i64;
     let buffer = alloc(0, size);
-    Matrix { buf = buffer, rows = rows, cols = cols }
+    Matrix { buf = buffer, offset = 0, rows = rows, cols = cols }
 }
 
 fn @reshape_matrix(m: Matrix, rows: i32, cols: i32) -> Matrix {
     if m.rows * m.cols == rows * cols {
-        make_matrix(m.buf, rows, cols)
+        make_matrix(m.buf, m.offset, rows, cols)
     } else {
         m
     }
@@ -62,8 +63,8 @@ fn @get_sparse_acc(m: Sparse) -> AccS {
 
 fn @get_mat_acc(m: Matrix) -> AccM {
     AccM {
-        read  = @|r, c|    { bitcast[&   [f32]](m.buf.data)(r * m.cols + c) },
-        write = @|r, c, v| { bitcast[&mut[f32]](m.buf.data)(r * m.cols + c) = v; }
+        read  = @|r, c|    { bitcast[&   [f32]](m.buf.data)(m.offset + r * m.cols + c) },
+        write = @|r, c, v| { bitcast[&mut[f32]](m.buf.data)(m.offset + r * m.cols + c) = v; }
     }
 }
 
@@ -99,7 +100,7 @@ fn @add_elem_wise(mat1: Matrix, mat2: Matrix) -> Matrix {
 
     let res_acc  = get_mat_acc(res);
     let mat2_acc = get_mat_acc(mat2);
-    for _acc, v, r, c in iterate_matrix_par(mat1) {
+    for _acc, v, r, c in iterate_matrix(mat1) {
         res_acc.write(r, c, mat2_acc.read(r,c) + v);
     }
     res

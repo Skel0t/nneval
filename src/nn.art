@@ -1,90 +1,80 @@
 // Tupel zurückgeben funktion & speicher den ich brauche. Signatur forward nimmt auch buffer für temporären speicher
-fn @make_sres_nn(kernels_arr: &[&&[&Buffer]], biases: &[&[f32]]) -> fn(Image) -> Image {
-    // Create in/out channels
+fn @make_sres_nn(kernels: Buffer, biases: &[f32]) -> fn(Image) -> Image {
+    // Create parameters for convolutions
     let in_channels_1  = 3;
     let out_channels_1 = 32;
+    let ksize_1 = 5;
+    let offset_1 = 0;
+
     let in_channels_2  = out_channels_1;
     let out_channels_2 = 64;
+    let ksize_2 = 3;
+    let offset_2 = offset_1 + ksize_1 * ksize_1 * in_channels_1 * out_channels_1;
+
     let in_channels_3  = out_channels_2;
     let out_channels_3 = 64;
+    let ksize_3 = 3;
+    let offset_3 = offset_2 + ksize_2 * ksize_2 * in_channels_2 * out_channels_2;
+
     let in_channels_4  = out_channels_3;
     let out_channels_4 = 32;
+    let ksize_4 = 5;
+    let offset_4 = offset_3 + ksize_3 * ksize_3 * in_channels_3 * out_channels_3;
+
     let in_channels_5  = out_channels_4;
     let out_channels_5 = 32;
+    let ksize_5 = 3;
+    let offset_5 = offset_4 + ksize_4 * ksize_4 * in_channels_4 * out_channels_4;
+
     let in_channels_6  = out_channels_5;
     let out_channels_6 = 32;
+    let ksize_6 = 3;
+    let offset_6 = offset_5 + ksize_5 * ksize_5 * in_channels_5 * out_channels_5;
+
     let in_channels_7  = out_channels_6;
     let out_channels_7 = 3;
+    let ksize_7 = 3;
+    let offset_7 = offset_6 + ksize_6 * ksize_6 * in_channels_6 * out_channels_6;
 
-    // Create kernel matrices
-    let mut matrices1 : [Matrix * 32];
-    for i in range(0, 32) {
-        let buf = (*kernels_arr(0))(i);
-        matrices1(i) = make_matrix(*buf, 5, 5 * 3);
-    }
+    // Kernel matrices higher order functions
+    let matrices1 = @|i: i32| { make_matrix(kernels, offset_1 + i * ksize_1 * ksize_1 * in_channels_1, ksize_1, ksize_1 * in_channels_1) };
+    let matrices2 = @|i: i32| { make_matrix(kernels, offset_2 + i * ksize_2 * ksize_2 * in_channels_2, ksize_2, ksize_2 * in_channels_2) };
+    let matrices3 = @|i: i32| { make_matrix(kernels, offset_3 + i * ksize_3 * ksize_3 * in_channels_3, ksize_3, ksize_3 * in_channels_3) };
+    let matrices4 = @|i: i32| { make_matrix(kernels, offset_4 + i * ksize_4 * ksize_4 * in_channels_4, ksize_4, ksize_4 * in_channels_4) };
+    let matrices5 = @|i: i32| { make_matrix(kernels, offset_5 + i * ksize_5 * ksize_5 * in_channels_5, ksize_5, ksize_5 * in_channels_5) };
+    let matrices6 = @|i: i32| { make_matrix(kernels, offset_6 + i * ksize_6 * ksize_6 * in_channels_6, ksize_6, ksize_6 * in_channels_6) };
+    let matrices7 = @|i: i32| { make_matrix(kernels, offset_7 + i * ksize_7 * ksize_7 * in_channels_7, ksize_7, ksize_7 * in_channels_7) };
 
-    let mut matrices2 : [Matrix * 64];
-    for i in range(0, 64) {
-        let buf = (*kernels_arr(1))(i);
-        matrices2(i) = make_matrix(*buf, 3, 3 * 32);
-    }
-
-    let mut matrices3 : [Matrix * 64];
-    for i in range(0, 64) {
-        let buf = (*kernels_arr(2))(i);
-        matrices3(i) = make_matrix(*buf, 3, 3 * 64);
-    }
-
-    // Higher order function instead of this loop, see teams
-    let mut matrices4 : [Matrix * 32];
-    for i in range(0, 32) {
-        let buf = (*kernels_arr(3))(i);
-        matrices4(i) = make_matrix(*buf, 5, 5 * 64);
-    }
-
-    let mut matrices5 : [Matrix * 32];
-    for i in range(0, 32) {
-        let buf = (*kernels_arr(4))(i);
-        matrices5(i) = make_matrix(*buf, 3, 3 * 32);
-    }
-
-    let mut matrices6 : [Matrix * 32];
-    for i in range(0, 32) {
-        let buf = (*kernels_arr(5))(i);
-        matrices6(i) = make_matrix(*buf, 3, 3 * 32);
-    }
-
-    let mut matrices7 : [Matrix * 3];
-    for i in range(0, 3) {
-        let buf = (*kernels_arr(6))(i);
-        matrices7(i) = make_matrix(*buf, 3, 3 * 32);
-    }
+    let no_bias   = @|_i:i32| { 0 as f32 };
+    let biases1   = @|i: i32| { biases(i) };
+    let biases2   = @|i: i32| { biases(i + out_channels_1) };
+    let biases3   = @|i: i32| { biases(i + out_channels_1 + out_channels_2) };
+    let biases4   = @|i: i32| { biases(i + out_channels_1 + out_channels_2 + out_channels_3) };
+    let biases5   = @|i: i32| { biases(i + out_channels_1 + out_channels_2 + out_channels_3 + out_channels_4) };
+    let biases6   = @|i: i32| { biases(i + out_channels_1 + out_channels_2 + out_channels_3 + out_channels_4 + out_channels_5) };
 
     // Speicher hier daklarieren und für forward_sres bereitstellen
-
-    // Ersetzen durch match statement/Entfernen probably einfach
-    let kernels : &[&[Matrix] * 7]= [&matrices1, &matrices2, &matrices3, &matrices4, &matrices5, &matrices6, &matrices7];
 
     fn @forward_sres(img: Image) -> Image {
         let mut img_mat = make_matrix_from_image(img, in_channels_1);
         let nearest_img = nearest(img_mat, in_channels_1);
 
         // Convolution 1
-        img_mat = conv2d(in_channels_1, out_channels_1, kernels(0), biases(0), img_mat, true);
+        img_mat = conv2d(in_channels_1, out_channels_1, matrices1, biases1, img_mat, true);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_1);
 
         print_string("conv1 done\n");
 
         // Convolution 2
-        img_mat = conv2d(in_channels_2, out_channels_2, kernels(1), biases(1), img_mat, true);
+        img_mat = conv2d(in_channels_2, out_channels_2, matrices2, biases2, img_mat, true);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_2);
 
         print_string("conv2 done\n");
 
         // Convolution 3
-        img_mat = conv2d(in_channels_3, out_channels_3, kernels(2), biases(2), img_mat, true);
+        img_mat = conv2d(in_channels_3, out_channels_3, matrices3, biases3, img_mat, true);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_3);
 
@@ -95,28 +85,28 @@ fn @make_sres_nn(kernels_arr: &[&&[&Buffer]], biases: &[&[f32]]) -> fn(Image) ->
         print_string("conv3 done\n");
 
         // Upconvolution 1 (Conv 4)
-        img_mat = conv2d(in_channels_4, out_channels_4, kernels(3), biases(3), img_mat, true);
+        img_mat = conv2d(in_channels_4, out_channels_4, matrices4, biases4, img_mat, true);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_4);
 
         print_string("conv4 (upconv) done\n");
 
         // Convolution 5
-        img_mat = conv2d(in_channels_5, out_channels_5, kernels(4), biases(4), img_mat, true);
+        img_mat = conv2d(in_channels_5, out_channels_5, matrices5, biases5, img_mat, true);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_5);
 
         print_string("conv5 done\n");
 
         // Convolution 6
-        img_mat = conv2d(in_channels_6, out_channels_6, kernels(5), biases(5), img_mat, true);
+        img_mat = conv2d(in_channels_6, out_channels_6, matrices6, biases6, img_mat, true);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_6);
 
         print_string("conv6 done\n");
 
         // Convolution 7
-        img_mat = conv2d(in_channels_7, out_channels_7, kernels(6), biases(0), img_mat, false);
+        img_mat = conv2d(in_channels_7, out_channels_7, matrices7, no_bias, img_mat, false);
         img_mat = make_interleaved(img_mat, out_channels_7);
 
         print_string("conv7 done\n");

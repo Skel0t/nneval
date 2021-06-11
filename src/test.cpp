@@ -28,7 +28,7 @@ void superres(std::string path, int width, int height) {
     anydsl::Array<float> weights(sizeof(float) * (memsize1 + memsize2 + memsize3 + memsize4 + memsize5 + memsize6 + memsize7));
 
     // Buffer for all convolution biases, one for each out_channel
-    float* biases = (float*) malloc(sizeof(float) * 32 * 64 * 64 * 32 * 32 * 32);
+    float* biases = (float*) malloc(sizeof(float) * (32 + 64 + 64 + 32 + 32 + 32));
 
     int offset = 0;
     read_in_weigths(&weights, offset, "/home/woshi/Documents/superres/src/network/conv1.txt",    3, 32, 5);
@@ -47,18 +47,18 @@ void superres(std::string path, int width, int height) {
 
     read_in_biases(biases, 0                     , "/home/woshi/Documents/superres/src/network/c1bias.txt",  32);
     read_in_biases(biases, 32                    , "/home/woshi/Documents/superres/src/network/c2bias.txt",  64);
-    read_in_biases(biases, 32 * 64               , "/home/woshi/Documents/superres/src/network/c3bias.txt",  64);
-    read_in_biases(biases, 32 * 64 * 64          , "/home/woshi/Documents/superres/src/network/uc1bias.txt", 32);
-    read_in_biases(biases, 32 * 64 * 64 * 32     , "/home/woshi/Documents/superres/src/network/c4bias.txt",  32);
-    read_in_biases(biases, 32 * 64 * 64 * 32 * 32, "/home/woshi/Documents/superres/src/network/c5bias.txt",  32);
+    read_in_biases(biases, 32 + 64               , "/home/woshi/Documents/superres/src/network/c3bias.txt",  64);
+    read_in_biases(biases, 32 + 64 + 64          , "/home/woshi/Documents/superres/src/network/uc1bias.txt", 32);
+    read_in_biases(biases, 32 + 64 + 64 + 32     , "/home/woshi/Documents/superres/src/network/c4bias.txt",  32);
+    read_in_biases(biases, 32 + 64 + 64 + 32 + 32, "/home/woshi/Documents/superres/src/network/c5bias.txt",  32);
     // conv 6 doesnt have a bias
 
-    // ImageRgba32 img;
-    // load_png(FilePath(path), img);
+    ImageRgba32 img;
+    load_png(FilePath(path), img);
 
-    offset_matrix_test(&weights, biases);
+    sres(&img.pixels, width, height, &img.pixels, &weights, biases);
 
-    // save_png_pointer(FilePath("out.png"), img.pixels.data(), width * 2, height * 2);
+    save_png_pointer(FilePath("out.png"), img.pixels.data(), width * 2, height * 2);
 
 }
 

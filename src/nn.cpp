@@ -58,7 +58,7 @@ void read_in_biases(float* buffer, int offset, std::string path, int out_channel
         std::cout << "Couldn't open" << path << std::endl;
     } else {
         for (int i = 0; i < out_channels; i++) {
-            f >> buffer[i];
+            f >> buffer[offset + i];
         }
     }
 }

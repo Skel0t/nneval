@@ -1,7 +1,7 @@
 #[export]
 fn sparse_mult_test(cnt: &Buffer, idz: &Buffer, buf: &Buffer) -> () {
     let m = make_sparse(*cnt, *idz, 2, 2);
-    let n = make_matrix(*buf, 3, 3);
+    let n = make_matrix(*buf, 0, 3, 3);
 
     print_sparse_content(m);print_string("\n");
     print_sparse_indizes(m);print_string("\n");
@@ -15,8 +15,8 @@ fn sparse_mult_test(cnt: &Buffer, idz: &Buffer, buf: &Buffer) -> () {
 
 #[export]
 fn create_conv_test(img: &Buffer, kernel: &Buffer) -> () {
-    let m = make_matrix(*img, 16, 1);
-    let k = make_matrix(*kernel, 3, 3);
+    let m = make_matrix(*img, 0, 16, 1);
+    let k = make_matrix(*kernel, 0, 3, 3);
 
     let n = make_conv_matrix(k, 4, 4, 1);
 
@@ -35,9 +35,9 @@ fn image_kernel_test(kernel1: &Buffer, kernel2: &Buffer, kernel3: &Buffer, img_b
 
     let img_mat = make_matrix_from_image(img, 3);
 
-    let k1 = make_matrix(*kernel1, 3, 9);
-    let k2 = make_matrix(*kernel2, 3, 9);
-    let k3 = make_matrix(*kernel3, 3, 9);
+    let k1 = make_matrix(*kernel1, 0, 3, 9);
+    let k2 = make_matrix(*kernel2, 0, 3, 9);
+    let k3 = make_matrix(*kernel3, 0, 3, 9);
 
     let c1 = convolute(k1, 3, img_mat, 4, 4, 0, false);
     let c2 = convolute(k2, 3, img_mat, 4, 4, 0, false);
@@ -54,7 +54,7 @@ fn image_kernel_test(kernel1: &Buffer, kernel2: &Buffer, kernel3: &Buffer, img_b
     release(c3.buf);
     release(img_mat.buf);
 
-    let pool_mat = max_pool(make_matrix(buf, img.height, img.width * 3), 2, 3);
+    let pool_mat = max_pool(make_matrix(buf, 0, img.height, img.width * 3), 2, 3);
 
     let interleaved_mat = make_interleaved(pool_mat, 3);
 
@@ -66,9 +66,7 @@ fn image_kernel_test(kernel1: &Buffer, kernel2: &Buffer, kernel3: &Buffer, img_b
 }
 
 #[export]
-fn @sres(img_buf: &Buffer, width: i32, height: i32, out_buf: &mut Buffer, kernels1: &&[&Buffer], kernels2: &&[&Buffer], kernels3: &&[&Buffer], upkernels1: &&[&Buffer], kernels4: &&[&Buffer], kernels5: &&[&Buffer], kernels6: &&[&Buffer],
-               biases1 : &[f32], biases2 : &[f32], biases3 : &[f32], upbiases1 : &[f32], biases4 : &[f32], biases5 : &[f32], biases6 : &[f32]) -> () {
-// out_buf mitgeben
+fn @sres(img_buf: &Buffer, width: i32, height: i32, out_buf: &mut Buffer, kernels: &Buffer, biases: &[f32]) -> () {
     print_i32(width);
     print_string("\t");
     print_i32(height);
@@ -78,10 +76,7 @@ fn @sres(img_buf: &Buffer, width: i32, height: i32, out_buf: &mut Buffer, kernel
     // The above prints even print 240 160... So it should be the same, shouldn't it?
     let img = make_image(*img_buf, 240, 160);
 
-    let kernels_arr = [kernels1, kernels2, kernels3, upkernels1, kernels4, kernels5, kernels6];
-    let bias_arr = [biases1, biases2, biases3, upbiases1, biases4, biases5, biases6];
-
-    let forward = make_sres_nn(kernels_arr, bias_arr);
+    let forward = make_sres_nn(*kernels, biases);
     let res = forward(img);
 
     *out_buf = res.buf;
