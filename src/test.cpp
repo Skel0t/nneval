@@ -10,32 +10,55 @@ void create_conv();
 void superres(std::string path, int width, int height);
 
 int main() {
-    superres("/home/woshi/Documents/nneval/src/img_073.png", 1024, 764);
+    superres("/home/woshi/Documents/nneval/src/65010.png", 240, 160);
     return 0;
 }
 
 void superres(std::string path, int width, int height) {
-    auto kernel1 = read_in_weigths2("/home/woshi/Documents/superres/src/network/conv1.txt", 3, 32, 5);
-    auto kernel2 = read_in_weigths2("/home/woshi/Documents/superres/src/network/conv2.txt", 32, 64, 3);
-    auto kernel3 = read_in_weigths2("/home/woshi/Documents/superres/src/network/conv3.txt", 64, 64, 3);
-    auto upkernel1 = read_in_weigths2("/home/woshi/Documents/superres/src/network/upconv1.txt", 64, 32, 5);
-    auto kernel4 = read_in_weigths2("/home/woshi/Documents/superres/src/network/conv4.txt", 32, 32, 3);
-    auto kernel5 = read_in_weigths2("/home/woshi/Documents/superres/src/network/conv5.txt", 32, 32, 3);
-    auto kernel6 = read_in_weigths2("/home/woshi/Documents/superres/src/network/conv6.txt", 32,  3, 3);
+    // Necessary memory: "sizeof(float) * ksize * ksize * in_channels * out_channels" for each convolution
+    const int memsize1 = 5 * 5 *  3 * 32;
+    const int memsize2 = 3 * 3 * 32 * 64;
+    const int memsize3 = 3 * 3 * 64 * 64;
+    const int memsize4 = 5 * 5 * 64 * 32;
+    const int memsize5 = 3 * 3 * 32 * 32;
+    const int memsize6 = 3 * 3 * 32 * 32;
+    const int memsize7 = 3 * 3 * 32 *  3;
 
-    auto c1Bias = read_in_biases("/home/woshi/Documents/superres/src/network/c1bias.txt", 32);
-    auto c2Bias = read_in_biases("/home/woshi/Documents/superres/src/network/c2bias.txt", 64);
-    auto c3Bias = read_in_biases("/home/woshi/Documents/superres/src/network/c3bias.txt", 64);
-    auto upc1Bias = read_in_biases("/home/woshi/Documents/superres/src/network/uc1bias.txt", 32);
-    auto c4Bias = read_in_biases("/home/woshi/Documents/superres/src/network/c4bias.txt", 32);
-    auto c5Bias = read_in_biases("/home/woshi/Documents/superres/src/network/c5bias.txt", 32);
+    // Buffer for all convolution weights
+    anydsl::Array<float> weights(sizeof(float) * (memsize1 + memsize2 + memsize3 + memsize4 + memsize5 + memsize6 + memsize7));
 
-    ImageRgba32 img;
-    load_png(FilePath(path), img);
+    // Buffer for all convolution biases, one for each out_channel
+    float* biases = (float*) malloc(sizeof(float) * 32 * 64 * 64 * 32 * 32 * 32);
 
-    auto ptr = sres(&img.pixels, width, height, kernel1, kernel2, kernel3, upkernel1, kernel4, kernel5, kernel6, c1Bias, c2Bias, c3Bias, upc1Bias, c4Bias, c5Bias, c5Bias);
+    int offset = 0;
+    read_in_weigths(&weights, offset, "/home/woshi/Documents/superres/src/network/conv1.txt",    3, 32, 5);
+    offset += memsize1;
+    read_in_weigths(&weights, offset, "/home/woshi/Documents/superres/src/network/conv2.txt",   32, 64, 3);
+    offset += memsize2;
+    read_in_weigths(&weights, offset, "/home/woshi/Documents/superres/src/network/conv3.txt",   64, 64, 3);
+    offset += memsize3;
+    read_in_weigths(&weights, offset, "/home/woshi/Documents/superres/src/network/upconv1.txt", 64, 32, 5);
+    offset += memsize4;
+    read_in_weigths(&weights, offset, "/home/woshi/Documents/superres/src/network/conv4.txt",   32, 32, 3);
+    offset += memsize5;
+    read_in_weigths(&weights, offset, "/home/woshi/Documents/superres/src/network/conv5.txt",   32, 32, 3);
+    offset += memsize6;
+    read_in_weigths(&weights, offset, "/home/woshi/Documents/superres/src/network/conv6.txt",   32,  3, 3);
 
-    save_png_pointer(FilePath("out.png"), ptr, width * 2, height * 2);
+    read_in_biases(biases, 0                     , "/home/woshi/Documents/superres/src/network/c1bias.txt",  32);
+    read_in_biases(biases, 32                    , "/home/woshi/Documents/superres/src/network/c2bias.txt",  64);
+    read_in_biases(biases, 32 * 64               , "/home/woshi/Documents/superres/src/network/c3bias.txt",  64);
+    read_in_biases(biases, 32 * 64 * 64          , "/home/woshi/Documents/superres/src/network/uc1bias.txt", 32);
+    read_in_biases(biases, 32 * 64 * 64 * 32     , "/home/woshi/Documents/superres/src/network/c4bias.txt",  32);
+    read_in_biases(biases, 32 * 64 * 64 * 32 * 32, "/home/woshi/Documents/superres/src/network/c5bias.txt",  32);
+    // conv 6 doesnt have a bias
+
+    // ImageRgba32 img;
+    // load_png(FilePath(path), img);
+
+    offset_matrix_test(&weights, biases);
+
+    // save_png_pointer(FilePath("out.png"), img.pixels.data(), width * 2, height * 2);
 
 }
 

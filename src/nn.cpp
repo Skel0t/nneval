@@ -4,28 +4,23 @@
 #include "interface.h"
 #include "nn.h"
 
-float* read_in_weigths(std::string path, int in_channels, int out_channels, int ksize) {
+void read_in_weigths(anydsl::Array<float>* buffer, int offset, std::string path, int in_channels, int out_channels, int ksize) {
     std::fstream f;
     f.open(path, std::ios::in);
     if (!f) {
-        std::cout << "Couldn't open" << std::endl;
-        return nullptr;
+        std::cout << "Couldn't open " << path << std::endl;
     } else {
-        float* ptr = (float*) malloc(sizeof(float) * ksize * ksize * in_channels * out_channels);
-
         for (int i = 0; i < out_channels; i++) {
             int k_nr = i * in_channels * ksize * ksize;
             for (int j = 0; j < in_channels; j++) {
                 for (int y = 0; y < ksize; y++) {
                     int k_row = y * ksize * in_channels;
                     for (int x = 0; x < ksize; x++) {
-                        f >> ptr[k_nr + k_row + x * in_channels + j];
+                        f >> buffer->data()[offset + k_nr + k_row + x * in_channels + j];
                     }
                 }
             }
         }
-        float x;
-        return ptr;
     }
 }
 
@@ -33,7 +28,7 @@ anydsl::Array<anydsl::Array<float>*>* read_in_weigths2(std::string path, int in_
     std::fstream f;
     f.open(path, std::ios::in);
     if (!f) {
-        std::cout << "Couldn't open" << std::endl;
+        std::cout << "Couldn't open" << path << std::endl;
         return nullptr;
     } else {
         anydsl::Array<anydsl::Array<float>*>* outer_ptr = new anydsl::Array<anydsl::Array<float>*>(sizeof(anydsl::Array<float>*) * out_channels);
@@ -52,16 +47,27 @@ anydsl::Array<anydsl::Array<float>*>* read_in_weigths2(std::string path, int in_
             }
             (*outer_ptr)[i] = ptr;
         }
-        float x;
         return outer_ptr;
     }
 }
 
-float* read_in_biases(std::string path, int out_channels) {
+void read_in_biases(float* buffer, int offset, std::string path, int out_channels) {
     std::fstream f;
     f.open(path, std::ios::in);
     if (!f) {
-        std::cout << "Couldn't open" << std::endl;
+        std::cout << "Couldn't open" << path << std::endl;
+    } else {
+        for (int i = 0; i < out_channels; i++) {
+            f >> buffer[i];
+        }
+    }
+}
+
+float* read_in_biases2(std::string path, int out_channels) {
+    std::fstream f;
+    f.open(path, std::ios::in);
+    if (!f) {
+        std::cout << "Couldn't open" << path << std::endl;
         return nullptr;
     } else {
         float* ptr = (float*) malloc(sizeof(float) * out_channels);

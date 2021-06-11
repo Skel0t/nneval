@@ -9,7 +9,7 @@ fn @make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i3
 
     let stride_y = im_width * channels;
 
-    for j in range(0, im_height) {
+    for j in parallel(0, 0, im_height) {
         for i in range(0, im_width) {
             let s_row = j * im_width + i;
             for r in unroll(-ksizeh_r, ksizeh_r+1) {
@@ -30,7 +30,7 @@ fn @make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i3
     }
     m
 }
-// Accessor für matrix mit channel machen, um
+// Accessor für matrix mit channel machen, um diese routine mit non interleaved channel easy zu benutzen
 
 
 // Image needs to be channel-interleaved (e.g. RGBRGBRGB), same for kernel weights
@@ -38,12 +38,12 @@ fn @convolute(kernel: Matrix, channels: i32, img_mat: Matrix, width: i32, height
     let m = reshape_matrix(img_mat, img_mat.rows * img_mat.cols, 1);    // Image as column-vector, interleaved column style
 
     let conv = make_conv_matrix(kernel, width, height, channels);
-    let prod = sparse_mult(conv, m);
+    let prod = sparse_mult(conv, m);    // Fails here with leaky_relu parallelized, WHY?
     let reshaped = reshape_matrix(prod, height, width);
 
     if use_bias {
         let res_acc = get_mat_acc(reshaped);
-        for v, r, c in iterate_matrix(reshaped) {
+        for _acc, v, r, c in iterate_matrix(reshaped) {
             res_acc.write(r, c, v + bias);
         }
     }
@@ -62,7 +62,7 @@ fn @conv2d(in_channels: i32, out_channels: i32, kernels: &[Matrix], biases: &[f3
     let copy_size  = width as i64 * height as i64 * 4;
     let conv_buffer = alloc(0, copy_size * out_channels as i64);
 
-    for i in unroll(0, out_channels) {
+    for i in range(0, out_channels) {
         let conv_mat = convolute(kernels(i), in_channels, img_mat, width, height, biases(i), use_bias);
         let buf_off  = i as i64 * copy_size;
         runtime_copy(0, bitcast[&[i8]](conv_mat.buf.data), 0, 0, conv_buffer.data, buf_off, copy_size);
@@ -97,8 +97,7 @@ fn @max_pool(img_mat: Matrix, ksize: i32, channels:i32) -> Matrix {
 }
 
 fn @leaky_relu(img_mat: Matrix) -> Matrix {
-    let acc = get_mat_acc(img_mat);
-    for v, r, c in iterate_matrix(img_mat) {
+    for acc, v, r, c in iterate_matrix(img_mat) {
         acc.write(r, c, leaky_relu_x(0.01, v));
     }
     img_mat

@@ -69,11 +69,10 @@ fn @get_mat_acc(m: Matrix) -> AccM {
 
 fn @matmul(a: Matrix, b: Matrix) -> Matrix {
     let m = make_matrix_empty(a.rows, b.cols);
-    let m_acc = get_mat_acc(m);
     let a_acc = get_mat_acc(a);
     let b_acc = get_mat_acc(b);
 
-    for _v, r, c in iterate_matrix(m) {
+    for m_acc, _v, r, c in iterate_matrix_par(m) {
         m_acc.write(r, c, 0);
         for i in range(0, a.cols) {
             m_acc.write(r, c, m_acc.read(r, c) + a_acc.read(r, i) * b_acc.read(i, c));
@@ -84,12 +83,11 @@ fn @matmul(a: Matrix, b: Matrix) -> Matrix {
 
 fn @sparse_mult(a: Sparse, b: Matrix) -> Matrix {
     let m = make_matrix_empty(a.rows, b.cols);
-    let m_acc = get_mat_acc(m);
     let b_acc = get_mat_acc(b);
 
-    for _v, r, c in iterate_matrix(m) {
+    for m_acc, _v, r, c in iterate_matrix(m) {
         m_acc.write(r, c, 0);
-        for v, i, _c in iterate_sparse_row(a, r) {
+        for _acc, v, i, _c in iterate_sparse_row(a, r) {
             m_acc.write(r, c, m_acc.read(r, c) + v * b_acc.read(i, c));
         }
     }
@@ -101,7 +99,7 @@ fn @add_elem_wise(mat1: Matrix, mat2: Matrix) -> Matrix {
 
     let res_acc  = get_mat_acc(res);
     let mat2_acc = get_mat_acc(mat2);
-    for v, r, c in iterate_matrix(mat1) {
+    for _acc, v, r, c in iterate_matrix_par(mat1) {
         res_acc.write(r, c, mat2_acc.read(r,c) + v);
     }
     res
