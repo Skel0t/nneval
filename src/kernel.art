@@ -52,8 +52,7 @@ fn @convolute(kernel: Matrix, channels: i32, img_mat: Matrix, width: i32, height
         }
     }
 
-    release(conv.content);
-    release(conv.indizes);
+    release(conv.buf);
 
     reshaped
 }

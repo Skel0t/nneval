@@ -1,6 +1,7 @@
 #[export]
 fn sparse_mult_test(cnt: &Buffer, idz: &Buffer, buf: &Buffer) -> () {
-    let m = make_sparse(*cnt, *idz, 2, 2);
+    // Deprecated.
+    let m = make_sparse(*cnt, 0, 2, 2);
     let n = make_matrix(*buf, 0, 3, 3);
 
     print_sparse_content(m);print_string("\n");

@@ -6,8 +6,8 @@ struct Matrix {
 }
 
 struct Sparse { // TODO: add offset here, use only 1 Buffer
-    content : Buffer,
-    indizes : Buffer,
+    buf : Buffer,
+    offset : i32,
     rows : i32,
     cols : i32
 }
@@ -42,23 +42,22 @@ fn @reshape_matrix(m: Matrix, rows: i32, cols: i32) -> Matrix {
     }
 }
 
-fn @make_sparse(content: Buffer, indizes: Buffer, rows: i32, cols: i32) -> Sparse {
-    Sparse { content = content, indizes = indizes, rows = rows, cols = cols}
+fn @make_sparse(buf: Buffer, offset: i32, rows: i32, cols: i32) -> Sparse {
+    Sparse { buf = buf, offset = offset, rows = rows, cols = cols}
 }
 
 fn @make_sparse_empty(rows: i32, cols: i32) -> Sparse {
-    let size = 4 * rows as i64 * cols as i64;
-    let buff_c = alloc(0, size);
-    let buff_i = alloc(0, size);
-    Sparse { content = buff_c, indizes = buff_i, rows = rows, cols = cols}
+    let size = 4 * rows as i64 * cols as i64 * 2;
+    let buf = alloc(0, size);
+    Sparse { buf = buf, offset = 0, rows = rows, cols = cols}
 }
 
 fn @get_sparse_acc(m: Sparse) -> AccS {
     AccS {
-        readC = @|r, c|       { bitcast[&   [f32]](m.content.data)(r * m.cols + c) },
-        readI = @|r, c|       { bitcast[&   [i32]](m.indizes.data)(r * m.cols + c) },
-        write = @|r, c, v, i| { bitcast[&mut[f32]](m.content.data)(r * m.cols + c) = v;
-                                bitcast[&mut[i32]](m.indizes.data)(r * m.cols + c) = i; }
+        readC = @|r, c|       { bitcast[&   [f32]](m.buf.data)(m.offset + r * m.cols + c) },
+        readI = @|r, c|       { bitcast[&   [i32]](m.buf.data)(m.offset + m.cols * m.rows + r * m.cols + c) },
+        write = @|r, c, v, i| { bitcast[&mut[f32]](m.buf.data)(m.offset + r * m.cols + c) = v;
+                                bitcast[&mut[i32]](m.buf.data)(m.offset + m.cols * m.rows + r * m.cols + c) = i; }
     }
 }
 
