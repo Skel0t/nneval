@@ -3,13 +3,17 @@ fn @make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i3
     let m_acc = get_sparse_acc(m);
     let k_acc = get_mat_acc(kernel);
 
-    // Not very efficient, but should be okay since this is only necessary once
+    // Not very efficient, can maybe only set the ones to 0 that arent set in the loop below?
+    for _acc, _v, _i, r, c in iterate_sparse(m) {
+        m_acc.write(r, c, 0.0, 0);
+    }
+
     let ksizeh_r = kernel.rows / 2;
     let ksizeh_c = kernel.cols / (2 * channels);
 
     let stride_y = im_width * channels;
 
-    for j in range(0, im_height) {
+    for j in parallel(0, 0, im_height) {
         for i in range(0, im_width) {
             let s_row = j * im_width + i;
             for r in unroll(-ksizeh_r, ksizeh_r+1) {
@@ -77,6 +81,7 @@ fn @conv2d(in_channels: i32, out_channels: i32, kernels: fn(i32) -> Matrix, bias
 fn @max_pool(img_mat: Matrix, ksize: i32, channels:i32) -> Matrix {
     let buffer = alloc(0, 4 * img_mat.cols as i64 * img_mat.rows as i64 / (ksize * ksize) as i64);
 
+    // TODO: Use accessors
     let acc     = bitcast[&mut[f32]](buffer.data);
     let img_acc = bitcast[&[f32]](img_mat.buf.data);
     for i in unroll(0, channels) {
@@ -97,7 +102,7 @@ fn @max_pool(img_mat: Matrix, ksize: i32, channels:i32) -> Matrix {
 }
 
 fn @leaky_relu(img_mat: Matrix) -> Matrix {
-    for acc, v, r, c in iterate_matrix(img_mat) {
+    for acc, v, r, c in iterate_matrix(img_mat) { // TODO: Can't use par here, why?
         acc.write(r, c, leaky_relu_x(0.01, v));
     }
     img_mat

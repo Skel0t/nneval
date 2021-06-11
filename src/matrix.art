@@ -5,13 +5,14 @@ struct Matrix {
     cols : i32
 }
 
-struct Sparse {
+struct Sparse { // TODO: add offset here, use only 1 Buffer
     content : Buffer,
     indizes : Buffer,
     rows : i32,
     cols : i32
 }
 
+// TODO: Write accessors with channels?
 struct AccM {
     read  : fn(i32, i32) -> f32,
     write : fn(i32, i32, f32) -> ()
@@ -85,8 +86,9 @@ fn @matmul(a: Matrix, b: Matrix) -> Matrix {
 fn @sparse_mult(a: Sparse, b: Matrix) -> Matrix {
     let m = make_matrix_empty(a.rows, b.cols);
     let b_acc = get_mat_acc(b);
+    let a_acc = get_sparse_acc(a);
 
-    for m_acc, _v, r, c in iterate_matrix(m) {
+    for m_acc, _v, r, c in iterate_matrix_par(m) {
         m_acc.write(r, c, 0);
         for _acc, v, i, _c in iterate_sparse_row(a, r) {
             m_acc.write(r, c, m_acc.read(r, c) + v * b_acc.read(i, c));
@@ -100,7 +102,7 @@ fn @add_elem_wise(mat1: Matrix, mat2: Matrix) -> Matrix {
 
     let res_acc  = get_mat_acc(res);
     let mat2_acc = get_mat_acc(mat2);
-    for _acc, v, r, c in iterate_matrix(mat1) {
+    for _acc, v, r, c in iterate_matrix_par(mat1) {
         res_acc.write(r, c, mat2_acc.read(r,c) + v);
     }
     res
