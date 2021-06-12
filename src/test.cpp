@@ -55,11 +55,17 @@ void superres(std::string path, int width, int height) {
 
     ImageRgba32 img;
     load_png(FilePath(path), img);
+    anydsl::Array<uint8_t> result(sizeof(uint8_t) * (2 * width) * (2 * height) * 3);
 
-    sres(&img.pixels, width, height, &img.pixels, &weights, biases);
+    sres(&img.pixels, width, height, &result, &weights, biases);
 
     save_png_pointer(FilePath("out.png"), img.pixels.data(), width * 2, height * 2);
 
+    // Free all allocated memory
+    weights.release();
+    img.pixels.release();
+    result.release();
+    free(biases);
 }
 /*
 void create_conv() {

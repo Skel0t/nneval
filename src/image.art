@@ -21,8 +21,8 @@ fn @get_image_acc(img: Image, channels: i32) -> AccI {
 }
 
 // Divides all uint8 in the image to create a [0-1] float Matrix
-fn @make_matrix_from_image(img: Image, channels: i32) -> Matrix {
-    let m = make_matrix_empty(img.height, img.width * channels);
+fn @make_matrix_from_image(img: Image, channels: i32, buf: Buffer, off: i64) -> Matrix {
+    let m = make_matrix(buf, off, img.height, img.width * channels);
     let acc_m = get_mat_acc(m);
 
     for _a, v, x, y, c in iterate_image(img, channels) {
@@ -32,10 +32,9 @@ fn @make_matrix_from_image(img: Image, channels: i32) -> Matrix {
 }
 
 // Multiplies all floats in the matrix by 255 to return an 8-bit image
-fn @make_image_from_matrix(m: Matrix, channels: i32) -> Image {
+fn @make_image_from_matrix(m: Matrix, channels: i32, buf: Buffer) -> Image {
     let height = m.rows;
     let width = m.cols / channels;
-    let buf = alloc(0, m.rows as i64 * m.cols as i64);
     let img = make_image(buf, width, height);
 
     let acc_m = get_mat_acc(m);

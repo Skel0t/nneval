@@ -69,20 +69,11 @@ fn image_kernel_test(kernel1: &Buffer, kernel2: &Buffer, kernel3: &Buffer, img_b
 */
 
 #[export]
-fn @sres(img_buf: &Buffer, width: i32, height: i32, out_buf: &mut Buffer, kernels: &Buffer, biases: &[f32]) -> () {
-    print_i32(width);
-    print_string("\t");
-    print_i32(height);
-    print_string("\n");
+fn @sres(img_buf: &Buffer, width: i32, height: i32, out_buf: &Buffer, kernels: &Buffer, biases: &[f32]) -> () {
+    let img = make_image(*img_buf, width, height);
 
-    // Why doesn't it work when i exchange 240 for width and 160 for height?
-    // The above prints even print 240 160... So it should be the same, shouldn't it?
-    let img = make_image(*img_buf, 240, 160);
-
-    let forward = make_sres_nn(*kernels, biases, 240, 160);
-    let res = forward(img);
-
-    *out_buf = res.buf;
+    let forward = make_sres_nn(*kernels, biases, width, height);
+    forward(img, *out_buf);
 }
 
 #[export]
