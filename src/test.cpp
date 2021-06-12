@@ -3,10 +3,10 @@
 #include "interface.h"
 #include "image.h"
 #include "nn.h"
-
+/*
 void sparseMult();
 void imageTest();
-void create_conv();
+void create_conv();`*/
 void superres(std::string path, int width, int height);
 
 int main() {
@@ -61,7 +61,7 @@ void superres(std::string path, int width, int height) {
     save_png_pointer(FilePath("out.png"), img.pixels.data(), width * 2, height * 2);
 
 }
-
+/*
 void create_conv() {
     float arr1[] = {    4.f,    3.f,    2.f,    1.f,
                         5.f,    6.f,    7.f,    8.f,
@@ -128,3 +128,4 @@ void imageTest() {
 
     save_png_pointer(FilePath("out.png"), ptr, 1920, 1110);
 }
+*/

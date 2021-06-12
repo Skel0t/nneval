@@ -1,5 +1,5 @@
-fn @make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i32) -> Sparse {
-    let m = make_sparse_empty(im_width * im_height, kernel.cols * kernel.rows);
+fn @make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i32, buf: Buffer, off: i32) -> Sparse {
+    let m = make_sparse(buf, off, im_width * im_height, kernel.cols * kernel.rows);
     let m_acc = get_sparse_acc(m);
     let k_acc = get_mat_acc(kernel);
 
@@ -38,42 +38,32 @@ fn @make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i3
 
 
 // Image needs to be channel-interleaved (e.g. RGBRGBRGB), same for kernel weights
-fn @convolute(kernel: Matrix, channels: i32, img_mat: Matrix, width: i32, height: i32, bias: f32, use_bias: bool) -> Matrix {
+fn @convolute(kernel: Matrix, channels: i32, img_mat: Matrix, width: i32, height: i32, bias: f32, use_bias: bool, buf: Buffer, off: i32, off_res: i32) -> () {
     let m = reshape_matrix(img_mat, img_mat.rows * img_mat.cols, 1);    // Image as column-vector, interleaved column style
 
-    let conv = make_conv_matrix(kernel, width, height, channels);
-    let prod = sparse_mult(conv, m);    // Fails here with leaky_relu parallelized, WHY?
-    let reshaped = reshape_matrix(prod, height, width);
+    let conv = make_conv_matrix(kernel, width, height, channels, buf, off);
+    let prod = sparse_mult(conv, m, buf, off_res);    // Fails here with leaky_relu parallelized, WHY?
 
     if use_bias {
-        let res_acc = get_mat_acc(reshaped);
-        for _acc, v, r, c in iterate_matrix(reshaped) {
-            res_acc.write(r, c, v + bias);
+        for acc, v, r, c in iterate_matrix(prod) {
+            acc.write(r, c, v + bias);
         }
     }
-
-    release(conv.buf);
-
-    reshaped
 }
 
-// statt array matrizen fn(i32) -> Matrix, same for bias
-fn @conv2d(in_channels: i32, out_channels: i32, kernels: fn(i32) -> Matrix, biases: fn(i32) -> f32, img_mat: Matrix, use_bias: bool) -> Matrix {
+fn @conv2d(in_channels: i32, out_channels: i32, kernels: fn(i32) -> Matrix, biases: fn(i32) -> f32, img_mat: Matrix, use_bias: bool, buf: Buffer, off: i32) -> Matrix {
     let width  = img_mat.cols / in_channels;
     let height = img_mat.rows;
 
-    let copy_size  = width as i64 * height as i64 * 4;
-    let conv_buffer = alloc(0, copy_size * out_channels as i64);
+    let result_size = width * height;
+    let sparse_size = 2 * width * height * kernels(0).cols * kernels(0).rows;
 
     for i in range(0, out_channels) {
-        let conv_mat = convolute(kernels(i), in_channels, img_mat, width, height, biases(i), use_bias);
-        let buf_off  = i as i64 * copy_size;
-        runtime_copy(0, bitcast[&[i8]](conv_mat.buf.data), 0, 0, conv_buffer.data, buf_off, copy_size);
-        release(conv_mat.buf);
+        let buf_off  = i * result_size + sparse_size;
+        let conv_mat = convolute(kernels(i), in_channels, img_mat, width, height, biases(i), use_bias, buf, off, buf_off);
     }
 
-    release(img_mat.buf);
-    make_matrix(conv_buffer, 0, height, width * out_channels)
+    make_matrix(buf, off + sparse_size, height, width * out_channels)
 }
 
 // Image by channels separated RRRRRR...GGGGGG....BBBBBB
@@ -122,18 +112,17 @@ fn @leaky_relu_x(neg_slope: f32, x: f32) -> f32 {
 fn @make_interleaved(img_mat: Matrix, channels: i32) -> Matrix {
     let bufC = alloc(0, 4 * img_mat.cols as i64 * img_mat.rows as i64);
     let accC = bitcast[&mut[f32]](bufC.data);
-    let accB = bitcast[&[f32]](img_mat.buf.data);
+    let accB = bitcast[&   [f32]](img_mat.buf.data);
 
     // TODO: Use accessors and matrix iteration
     for y in range(0, img_mat.rows) {
         for x in range(0, img_mat.cols / channels) {
             for i in unroll(0, channels) {
-                accC(y * img_mat.cols + x * channels + i) = accB(y * img_mat.cols / channels + x + i * img_mat.cols * img_mat.rows / channels);
+                accC(y * img_mat.cols + x * channels + i) = accB(img_mat.offset + y * img_mat.cols / channels + x + i * img_mat.cols * img_mat.rows / channels);
             }
         }
     }
 
-    release(img_mat.buf);
     make_matrix(bufC, 0, img_mat.rows, img_mat.cols)
 }
 

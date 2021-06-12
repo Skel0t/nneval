@@ -1,3 +1,4 @@
+/*
 #[export]
 fn sparse_mult_test(cnt: &Buffer, idz: &Buffer, buf: &Buffer) -> () {
     // Deprecated.
@@ -65,6 +66,7 @@ fn image_kernel_test(kernel1: &Buffer, kernel2: &Buffer, kernel3: &Buffer, img_b
 
     bitcast[&[u8]](result_img.buf.data)
 }
+*/
 
 #[export]
 fn @sres(img_buf: &Buffer, width: i32, height: i32, out_buf: &mut Buffer, kernels: &Buffer, biases: &[f32]) -> () {
@@ -77,14 +79,14 @@ fn @sres(img_buf: &Buffer, width: i32, height: i32, out_buf: &mut Buffer, kernel
     // The above prints even print 240 160... So it should be the same, shouldn't it?
     let img = make_image(*img_buf, 240, 160);
 
-    let forward = make_sres_nn(*kernels, biases);
+    let forward = make_sres_nn(*kernels, biases, 240, 160);
     let res = forward(img);
 
     *out_buf = res.buf;
 }
 
 #[export]
-fn offset_matrix_test(kernels: &Buffer, biases: &[f32]) -> () {
+fn offset_matrix_test(kernels: &Buffer, _biases: &[f32]) -> () {
     let bc = bitcast[&mut[f32]](kernels.data);
 
     print_f32(bc(0)); print_string("\n");

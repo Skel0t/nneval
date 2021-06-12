@@ -1,5 +1,5 @@
 // Tupel zurückgeben funktion & speicher den ich brauche. Signatur forward nimmt auch buffer für temporären speicher
-fn @make_sres_nn(kernels: Buffer, biases: &[f32]) -> fn(Image) -> Image {
+fn @make_sres_nn(kernels: Buffer, biases: &[f32], width: i32, height: i32) -> fn(Image) -> Image {
     // Create parameters for convolutions
     let in_channels_1  = 3;
     let out_channels_1 = 32;
@@ -54,27 +54,30 @@ fn @make_sres_nn(kernels: Buffer, biases: &[f32]) -> fn(Image) -> Image {
     let biases6   = @|i: i32| { biases(i + out_channels_1 + out_channels_2 + out_channels_3 + out_channels_4 + out_channels_5) };
 
     // Speicher hier daklarieren und für forward_sres bereitstellen
+    let max_size_for_conv = 2 * 4 as i64 * (2 * width as i64) * (2 * height as i64) * (ksize_4 * ksize_4 * in_channels_4) as i64  // sparse size
+                          + 4 * (2 * width as i64) * (2 * height as i64) * out_channels_4 as i64; // sparse mult prod size
+    let conv_buffer = alloc(0, max_size_for_conv);
 
     fn @forward_sres(img: Image) -> Image {
         let mut img_mat = make_matrix_from_image(img, in_channels_1);
         let nearest_img = nearest(img_mat, in_channels_1);
 
         // Convolution 1
-        img_mat = conv2d(in_channels_1, out_channels_1, matrices1, biases1, img_mat, true);
+        img_mat = conv2d(in_channels_1, out_channels_1, matrices1, biases1, img_mat, true, conv_buffer, 0);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_1);
 
         print_string("conv1 done\n");
 
         // Convolution 2
-        img_mat = conv2d(in_channels_2, out_channels_2, matrices2, biases2, img_mat, true);
+        img_mat = conv2d(in_channels_2, out_channels_2, matrices2, biases2, img_mat, true, conv_buffer, 0);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_2);
 
         print_string("conv2 done\n");
 
         // Convolution 3
-        img_mat = conv2d(in_channels_3, out_channels_3, matrices3, biases3, img_mat, true);
+        img_mat = conv2d(in_channels_3, out_channels_3, matrices3, biases3, img_mat, true, conv_buffer, 0);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_3);
 
@@ -85,28 +88,28 @@ fn @make_sres_nn(kernels: Buffer, biases: &[f32]) -> fn(Image) -> Image {
         print_string("conv3 done\n");
 
         // Upconvolution 1 (Conv 4)
-        img_mat = conv2d(in_channels_4, out_channels_4, matrices4, biases4, img_mat, true);
+        img_mat = conv2d(in_channels_4, out_channels_4, matrices4, biases4, img_mat, true, conv_buffer, 0);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_4);
 
         print_string("conv4 (upconv) done\n");
 
         // Convolution 5
-        img_mat = conv2d(in_channels_5, out_channels_5, matrices5, biases5, img_mat, true);
+        img_mat = conv2d(in_channels_5, out_channels_5, matrices5, biases5, img_mat, true, conv_buffer, 0);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_5);
 
         print_string("conv5 done\n");
 
         // Convolution 6
-        img_mat = conv2d(in_channels_6, out_channels_6, matrices6, biases6, img_mat, true);
+        img_mat = conv2d(in_channels_6, out_channels_6, matrices6, biases6, img_mat, true, conv_buffer, 0);
         leaky_relu(img_mat);
         img_mat = make_interleaved(img_mat, out_channels_6);
 
         print_string("conv6 done\n");
 
         // Convolution 7
-        img_mat = conv2d(in_channels_7, out_channels_7, matrices7, no_bias, img_mat, false);
+        img_mat = conv2d(in_channels_7, out_channels_7, matrices7, no_bias, img_mat, false, conv_buffer, 0);
         img_mat = make_interleaved(img_mat, out_channels_7);
 
         print_string("conv7 done\n");
