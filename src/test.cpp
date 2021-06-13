@@ -6,7 +6,7 @@
 /*
 void sparseMult();
 void imageTest();
-void create_conv();`*/
+void create_conv();*/
 void superres(std::string path, int width, int height);
 
 int main() {
@@ -59,7 +59,7 @@ void superres(std::string path, int width, int height) {
 
     sres(&img.pixels, width, height, &result, &weights, biases);
 
-    save_png_pointer(FilePath("out.png"), img.pixels.data(), width * 2, height * 2);
+    save_png_pointer(FilePath("out.png"), result.data(), width * 2, height * 2);
 
     // Free all allocated memory
     weights.release();
