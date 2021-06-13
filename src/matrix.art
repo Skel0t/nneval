@@ -28,12 +28,6 @@ fn @make_matrix(buffer: Buffer, offset: i64, rows: i32, cols: i32) -> Matrix {
     Matrix { buf = buffer, offset = offset, rows = rows, cols = cols }
 }
 
-fn @make_matrix_empty(rows: i32, cols: i32) -> Matrix {
-    let size = 4 * cols as i64 * rows as i64;
-    let buffer = alloc(0, size);
-    Matrix { buf = buffer, offset = 0, rows = rows, cols = cols }
-}
-
 fn @reshape_matrix(m: Matrix, rows: i32, cols: i32) -> Matrix {
     if m.rows * m.cols == rows * cols {
         make_matrix(m.buf, m.offset, rows, cols)
@@ -44,12 +38,6 @@ fn @reshape_matrix(m: Matrix, rows: i32, cols: i32) -> Matrix {
 
 fn @make_sparse(buf: Buffer, offset: i64, rows: i32, cols: i32) -> Sparse {
     Sparse { buf = buf, offset = offset, rows = rows, cols = cols}
-}
-
-fn @make_sparse_empty(rows: i32, cols: i32) -> Sparse {
-    let size = 4 * rows as i64 * cols as i64 * 2;
-    let buf = alloc(0, size);
-    Sparse { buf = buf, offset = 0, rows = rows, cols = cols}
 }
 
 fn @get_sparse_acc(m: Sparse) -> AccS {
@@ -68,8 +56,8 @@ fn @get_mat_acc(m: Matrix) -> AccM {
     }
 }
 
-fn @matmul(a: Matrix, b: Matrix) -> Matrix {
-    let m = make_matrix_empty(a.rows, b.cols);
+fn @matmul(a: Matrix, b: Matrix, buf: Buffer, off: i64) -> Matrix {
+    let m = make_matrix(buf, off, a.rows, b.cols);
     let a_acc = get_mat_acc(a);
     let b_acc = get_mat_acc(b);
 

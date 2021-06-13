@@ -68,6 +68,7 @@ fn @conv2d(in_channels: i32, out_channels: i32, kernels: fn(i32) -> Matrix, bias
 
 // Image by channels separated RRRRRR...GGGGGG....BBBBBB
 fn @max_pool(img_mat: Matrix, ksize: i32, channels:i32) -> Matrix {
+    // TODO dont use alloc
     let buffer = alloc(0, 4 * img_mat.cols as i64 * img_mat.rows as i64 / (ksize * ksize) as i64);
 
     // TODO: Use accessors

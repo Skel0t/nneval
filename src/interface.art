@@ -72,8 +72,10 @@ fn image_kernel_test(kernel1: &Buffer, kernel2: &Buffer, kernel3: &Buffer, img_b
 fn @sres(img_buf: &Buffer, width: i32, height: i32, out_buf: &Buffer, kernels: &Buffer, biases: &[f32]) -> () {
     let img = make_image(*img_buf, width, height);
 
-    let forward = make_sres_nn(*kernels, biases, width, height);
-    forward(img, *out_buf);
+    let nn = make_sres_nn(*kernels, biases, width, height);
+    let mem = alloc(0, nn.necess_mem);
+    nn.forward(img, mem, *out_buf);
+    release(mem);
 }
 
 #[export]
