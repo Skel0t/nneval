@@ -58,64 +58,56 @@ fn @make_sres_nn(kernels: Buffer, biases: &[f32], width: i32, height: i32) -> NN
     let biases6   = @|i: i32| { biases(i + out_channels_1 + out_channels_2 + out_channels_3 + out_channels_4 + out_channels_5) };
 
     // Calculate necessary memory
-    let max_size_for_conv = 2 as i64 * (2 * width as i64) * (2 * height as i64) * (ksize_4 * ksize_4 * in_channels_4) as i64  // sparse size
-                          + (2 * width as i64) * (2 * height as i64) * out_channels_4 as i64; // sparse mult prod size
-    let max_size_interleaved = (2 * width as i64) * (2 * height as i64) * out_channels_3 as i64;  // make_interleaved max needed space (out_channels 3 bc of nearest upscaling)
-    let size_upsampled_mat = (2 * width as i64) * (2 * height as i64) * in_channels_1 as i64;
+    let max_size_for_conv    = 2 as i64 * (2 * width as i64) * (2 * height as i64) * (ksize_4 * ksize_4 * in_channels_4) as i64  // sparse size
+                             + (2 * width as i64) * (2 * height as i64) * out_channels_4 as i64; // sparse mult prod size
+    let max_space_for_img    = (2 * width as i64) * (2 * height as i64) * out_channels_3 as i64; // space needed to save the image layer data during the forwarding
+    let size_upsampled_mat   = (2 * width as i64) * (2 * height as i64) * in_channels_1 as i64;
 
     fn @forward_sres(img: Image, mem: Buffer, out_buf: Buffer) -> () {
         let mut img_mat = make_matrix_from_image(img, in_channels_1, mem, max_size_for_conv);
-        let nearest_mat = nearest(img_mat, in_channels_1, mem, max_size_for_conv + max_size_interleaved);
+        let nearest_mat = nearest(img_mat, in_channels_1, true, mem, max_size_for_conv + max_space_for_img);
 
         // Convolution 1
-        img_mat = conv2d(in_channels_1, out_channels_1, matrices1, biases1, img_mat, true, mem, 0);
-        leaky_relu(img_mat);
-        img_mat = make_interleaved(img_mat, out_channels_1, mem, max_size_for_conv);
+        img_mat = conv2d(in_channels_1, out_channels_1, matrices1, biases1, img_mat, true, true, mem, 0);
+        img_mat = leaky_relu(img_mat, mem, max_size_for_conv);
 
         print_string("conv1 done\n");
 
         // Convolution 2
-        img_mat = conv2d(in_channels_2, out_channels_2, matrices2, biases2, img_mat, true, mem, 0);
-        leaky_relu(img_mat);
-        img_mat = make_interleaved(img_mat, out_channels_2, mem, max_size_for_conv);
+        img_mat = conv2d(in_channels_2, out_channels_2, matrices2, biases2, img_mat, true, false, mem, 0);
+        img_mat = leaky_relu(img_mat, mem, max_size_for_conv);
 
         print_string("conv2 done\n");
 
         // Convolution 3
-        img_mat = conv2d(in_channels_3, out_channels_3, matrices3, biases3, img_mat, true, mem, 0);
-        leaky_relu(img_mat);
-        img_mat = make_interleaved(img_mat, out_channels_3, mem, max_size_for_conv);
-
-        // Recycle memory instead of using new one
-        img_mat = nearest(img_mat, out_channels_3, mem, 0); 
+        img_mat = conv2d(in_channels_3, out_channels_3, matrices3, biases3, img_mat, true, false, mem, 0);
+        img_mat = leaky_relu(img_mat, mem, img_mat.offset);
+        img_mat = nearest(img_mat, out_channels_3, false, mem, max_size_for_conv);
 
         print_string("conv3 done\n");
 
         // Upconvolution 1 (Conv 4)
         // Need to swap offsets now, since the upscaling/recycling before changed the order of images in memory
-        img_mat = conv2d(in_channels_4, out_channels_4, matrices4, biases4, img_mat, true, mem, max_size_interleaved);
-        leaky_relu(img_mat);
-        img_mat = make_interleaved(img_mat, out_channels_4, mem, 0);
+        img_mat = conv2d(in_channels_4, out_channels_4, matrices4, biases4, img_mat, true, false, mem, 0);
+        img_mat = leaky_relu(img_mat, mem, max_size_for_conv);
 
         print_string("conv4 (upconv) done\n");
 
         // Convolution 5
-        img_mat = conv2d(in_channels_5, out_channels_5, matrices5, biases5, img_mat, true, mem, max_size_interleaved);
-        leaky_relu(img_mat);
-        img_mat = make_interleaved(img_mat, out_channels_5, mem, 0);
+        img_mat = conv2d(in_channels_5, out_channels_5, matrices5, biases5, img_mat, true, false, mem, 0);
+        img_mat = leaky_relu(img_mat, mem, max_size_for_conv);
 
         print_string("conv5 done\n");
 
         // Convolution 6
-        img_mat = conv2d(in_channels_6, out_channels_6, matrices6, biases6, img_mat, true, mem, max_size_interleaved);
-        leaky_relu(img_mat);
-        img_mat = make_interleaved(img_mat, out_channels_6, mem, 0);
+        img_mat = conv2d(in_channels_6, out_channels_6, matrices6, biases6, img_mat, true, false, mem, 0);
+        img_mat = leaky_relu(img_mat, mem, max_size_for_conv);
 
         print_string("conv6 done\n");
 
         // Convolution 7
-        img_mat = conv2d(in_channels_7, out_channels_7, matrices7, no_bias, img_mat, false, mem, max_size_interleaved);
-        img_mat = make_interleaved(img_mat, out_channels_7, mem, 0);
+        img_mat = conv2d(in_channels_7, out_channels_7, matrices7, no_bias, img_mat, false, false, mem, 0);
+        img_mat = make_interleaved(img_mat, out_channels_7, mem, max_size_for_conv);
 
         print_string("conv7 done\n");
 
@@ -126,5 +118,5 @@ fn @make_sres_nn(kernels: Buffer, biases: &[f32], width: i32, height: i32) -> NN
         make_image_from_matrix(img_mat, out_channels_7, out_buf);
     }
 
-    NN { forward = forward_sres, necess_mem = 4 * (max_size_for_conv + max_size_interleaved + size_upsampled_mat) }
+    NN { forward = forward_sres, necess_mem = 4 * (max_size_for_conv + max_space_for_img + size_upsampled_mat) }
 }
