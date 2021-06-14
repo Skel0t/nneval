@@ -4,7 +4,7 @@ fn @make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i3
     let k_acc = get_mat_acc(kernel);
 
     // Not very efficient, can maybe only set the ones to 0 that arent set in the loop below?
-    for _acc, _v, _i, r, c in iterate_sparse(m) {
+    for _acc, _v, _i, r, c in iterate_sparse_par(m) {
         m_acc.write(r, c, 0.0, 0);
     }
 
@@ -46,10 +46,10 @@ fn @convolute(kernel: Matrix, channels: i32, img_mat: Matrix, width: i32, height
     let m = reshape_matrix(img_mat, img_mat.rows * img_mat.cols, 1);    // Image as column-vector, interleaved column style
 
     let conv = make_conv_matrix(kernel, width, height, channels, interleaved, buf, off);
-    let prod = sparse_mult(conv, m, buf, off_res);    // Fails here with leaky_relu parallelized, WHY?
+    let prod = sparse_mult(conv, m, buf, off_res);
 
     if use_bias {
-        for acc, v, r, c in iterate_matrix(prod) {
+        for acc, v, r, c in iterate_matrix_par(prod) {
             acc.write(r, c, v + bias);
         }
     }
@@ -98,7 +98,7 @@ fn @max_pool(img_mat: Matrix, ksize: i32, channels:i32) -> Matrix {
 fn @leaky_relu(img_mat: Matrix, buf: Buffer, off: i64) -> Matrix {
     let res = make_matrix(buf, off, img_mat.rows, img_mat.cols);
     let m_acc = get_mat_acc(img_mat);
-    for r_acc, _v, r, c in iterate_matrix(res) { // TODO: Can't use par here, why?
+    for r_acc, _v, r, c in iterate_matrix_par(res) { // TODO: Can't use par here, why?
         r_acc.write(r, c, leaky_relu_x(0.01, m_acc.read(r, c)));
     }
     res
