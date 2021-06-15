@@ -1,36 +1,34 @@
-fn @make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i32, interleaved: bool, buf: Buffer, off: i64) -> Sparse {
-    let m = make_sparse(buf, off, im_width * im_height, kernel.cols * kernel.rows);
+fn @make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i32, format: MemoryFormat, buf: Buffer, off: i64) -> Sparse {
+    let m = make_sparse(buf, off, im_width * im_height, kernel.cols * kernel.rows * kernel.channels);
     let m_acc = get_sparse_acc(m);
     let k_acc = get_mat_acc(kernel);
 
-    // Not very efficient, can maybe only set the ones to 0 that arent set in the loop below?
-    for _acc, _v, _i, r, c in iterate_sparse_par(m) {
-        m_acc.write(r, c, 0.0, 0);
-    }
-
     let ksizeh_r = kernel.rows / 2;
-    let ksizeh_c = kernel.cols / (2 * channels);
+    let ksizeh_c = kernel.cols / 2;
 
     for j in parallel(0, 0, im_height) {
         for i in range(0, im_width) {
             let s_row = j * im_width + i;
             for r in unroll(-ksizeh_r, ksizeh_r+1) {
-                let im_row = j + r;
-                if im_row < 0 || im_row >= im_height { continue() } // padding with 0s s.t. image size at start and end is the same
                 for c in unroll(-ksizeh_c, ksizeh_c+1) {
+                    let im_row = j + r;
                     let im_col = i + c;
-                    if im_col < 0 || im_col >= im_width { continue() } // padding with 0s s.t. image size at start and end is the same
+
                     let k_row = r + ksizeh_r;
-                    let k_col = (c + ksizeh_c) * channels;
-                    let s_col = k_row * kernel.cols + k_col;
+                    let k_col = c + ksizeh_c;
+
+                    let s_col = (k_row * kernel.cols + k_col) * kernel.channels;
                     for channel in unroll(0, channels) {
-                        let mut index : i32;
-                        if interleaved {
-                            index = (im_row * im_width + im_col) * channels + channel;
-                        } else {
-                            index =  im_row * im_width + im_col + channel * im_width * im_height;
+                        if im_row < 0 || im_col < 0 || im_col >= im_width || im_row >= im_height {
+                            m_acc.write(s_row, s_col + channel, 0, 0); // padding with 0s s.t. image size at start and end is the same
+                            continue()
                         }
-                        m_acc.write(s_row, s_col + channel, k_acc.read(k_row, k_col + channel), index);
+                        let mut index : i32;
+                        match format {
+                            MemoryFormat::HWC => { index = (im_row * im_width + im_col) * channels + channel; },
+                            MemoryFormat::CHW => { index = (im_row * im_width + im_col) + channel * im_width * im_height; }
+                        }
+                        m_acc.write(s_row, s_col + channel, k_acc.read(k_row, k_col, channel), index);
                     }
                 }
             }
@@ -41,37 +39,36 @@ fn @make_conv_matrix(kernel: Matrix, im_width: i32, im_height: i32, channels: i3
 // Accessor für matrix mit channel machen, um diese routine mit non interleaved channel easy zu benutzen
 
 
-// Image needs to be channel-interleaved (e.g. RGBRGBRGB), same for kernel weights
-fn @convolute(kernel: Matrix, channels: i32, img_mat: Matrix, width: i32, height: i32, bias: f32, use_bias: bool, interleaved: bool, buf: Buffer, off: i64, off_res: i64) -> () {
+fn @convolute(kernel: Matrix, img_mat: Matrix, bias: f32, use_bias: bool, buf: Buffer, off: i64, off_res: i64) -> () {
     let m = reshape_matrix(img_mat, img_mat.rows * img_mat.cols, 1);    // Image as column-vector, interleaved column style
 
-    let conv = make_conv_matrix(kernel, width, height, channels, interleaved, buf, off);
+    let conv = make_conv_matrix(kernel, img_mat.cols, img_mat.rows, img_mat.channels, img_mat.format, buf, off);
     let prod = sparse_mult(conv, m, buf, off_res);
 
     if use_bias {
-        for acc, v, r, c in iterate_matrix_par(prod) {
-            acc.write(r, c, v + bias);
+        for acc, v, r, c, chn in iterate_matrix_par(prod) {
+            acc.write(r, c, chn, v + bias);
         }
     }
 }
 
-fn @conv2d(in_channels: i32, out_channels: i32, kernels: fn(i32) -> Matrix, biases: fn(i32) -> f32, img_mat: Matrix, use_bias: bool, interleaved: bool, buf: Buffer, off: i64) -> Matrix {
-    let width  = img_mat.cols / in_channels;
+fn @conv2d(out_channels: i32, kernels: fn(i32) -> Matrix, biases: fn(i32) -> f32, img_mat: Matrix, use_bias: bool, buf: Buffer, off: i64) -> Matrix {
+    let width  = img_mat.cols;
     let height = img_mat.rows;
 
     let result_size = width as i64 * height as i64;
-    let sparse_size = 2 * width as i64 * height as i64 * kernels(0).cols as i64 * kernels(0).rows as i64;
+    let sparse_size = 2 * (width as i64) * (height as i64) * (kernels(0).cols as i64) * (kernels(0).rows as i64) * (kernels(0).channels as i64);
 
     for i in range(0, out_channels) {
         let buf_off  = off + i as i64 * result_size + sparse_size;
-        convolute(kernels(i), in_channels, img_mat, width, height, biases(i), use_bias, interleaved, buf, off, buf_off);
+        convolute(kernels(i), img_mat, biases(i), use_bias, buf, off, buf_off);
     }
 
-    make_matrix(buf, off + sparse_size, height, width * out_channels)
+    make_matrix(buf, off + sparse_size, MemoryFormat::CHW, out_channels, height, width)
 }
 
 // Image by channels separated RRRRRR...GGGGGG....BBBBBB
-fn @max_pool(img_mat: Matrix, ksize: i32, channels:i32) -> Matrix {
+/*fn @max_pool(img_mat: Matrix, ksize: i32, channels:i32) -> Matrix {
     // TODO dont use alloc
     let buffer = alloc(0, 4 * img_mat.cols as i64 * img_mat.rows as i64 / (ksize * ksize) as i64);
 
@@ -93,13 +90,21 @@ fn @max_pool(img_mat: Matrix, ksize: i32, channels:i32) -> Matrix {
     }
     release(img_mat.buf);
     make_matrix(buffer, 0, img_mat.rows / 2, img_mat.cols / 2)
-}
+}*/
 
 fn @leaky_relu(img_mat: Matrix, buf: Buffer, off: i64) -> Matrix {
-    let res = make_matrix(buf, off, img_mat.rows, img_mat.cols);
+    fn @leaky_relu_x(neg_slope: f32, x: f32) -> f32 {
+        if x >= 0.0 {
+            x
+        } else {
+            neg_slope * x
+        }
+    }
+
+    let res = make_matrix(buf, off, img_mat.format, img_mat.channels, img_mat.rows, img_mat.cols);
     let m_acc = get_mat_acc(img_mat);
-    for r_acc, _v, r, c in iterate_matrix_par(res) { // TODO: Can't use par here, why?
-        r_acc.write(r, c, leaky_relu_x(0.01, m_acc.read(r, c)));
+    for r_acc, _v, r, c, chn in iterate_matrix_par(res) {
+        r_acc.write(r, c, chn, leaky_relu_x(0.01, m_acc.read(r, c, chn)));
     }
     res
 }
@@ -108,55 +113,55 @@ fn @max(x: f32, y: f32) -> f32 {
     select(x > y, x, y)
 }
 
-fn @leaky_relu_x(neg_slope: f32, x: f32) -> f32 {
-    if x >= 0.0 {
-        x
-    } else {
-        neg_slope * x
-    }
-}
+// Rewrites CHW and to HWC by copying
+fn @make_interleaved(img_mat: Matrix, buf: Buffer, off: i64) -> Matrix {
+    let res = make_matrix(buf, off, MemoryFormat::HWC, img_mat.channels, img_mat.rows, img_mat.cols);
 
-fn @make_interleaved(img_mat: Matrix, channels: i32, buf: Buffer, off: i64) -> Matrix {
-    let accC = bitcast[&mut[f32]](buf.data);
-    let accB = bitcast[&   [f32]](img_mat.buf.data);
+    let res_acc = get_mat_acc(res);
+    let img_acc = get_mat_acc(img_mat);
 
-    // TODO: Use accessors and matrix iteration
-    for y in range(0, img_mat.rows) {
-        for x in range(0, img_mat.cols / channels) {
-            for i in unroll(0, channels) {
-                accC(off + (y * img_mat.cols + x * channels + i) as i64) = accB(img_mat.offset + (y * img_mat.cols / channels + x + i * img_mat.cols * img_mat.rows / channels) as i64);
+    // TODO: Use matrix iteration
+    for row in range(0, img_mat.rows) {
+        for col in range(0, img_mat.cols) {
+            for chn in unroll(0, img_mat.channels) {
+                res_acc.write(row, col, chn, img_acc.read(row, col, chn));
             }
         }
     }
 
-    make_matrix(buf, off, img_mat.rows, img_mat.cols)
+    res
 }
 
-fn @nearest(img_mat: Matrix, channels: i32, interleaved: bool, buf: Buffer, off: i64) -> Matrix {
-    // TODO: CLEAN THIS MESS UP!
-    if interleaved {
-        let res_mat = make_matrix(buf, off, img_mat.rows * 2, img_mat.cols * 2);
-        let accR = get_mat_acc(res_mat);
+fn @nearest(img_mat: Matrix, buf: Buffer, off: i64) -> Matrix {
+    let res_mat = make_matrix(buf, off, img_mat.format, img_mat.channels, img_mat.rows * 2, img_mat.cols * 2);
 
-        let accI = get_mat_acc(img_mat);
-        for y in range(0, res_mat.rows) {
-            for x in range(0, res_mat.cols / channels) {
-                for channel in unroll(0, channels) {
-                    accR.write(y, (channels * x) + channel, accI.read(y / 2, channels * (x / 2) + channel));
-                }
+    let res_acc = get_mat_acc(res_mat);
+    let img_acc = get_mat_acc(img_mat);
+
+    // TODO: Matrix iteration!
+    for row in range(0, res_mat.rows) {
+        for col in range(0, res_mat.cols) {
+            for chn in range(0, res_mat.channels) {
+                res_acc.write(row, col, chn, img_acc.read(row / 2, col / 2, chn));
             }
         }
-        res_mat
-    } else {
-        let i_mat = reshape_matrix(img_mat, img_mat.rows * channels, img_mat.cols / channels);
-        let res_mat = make_matrix(buf, off, i_mat.rows * 2, i_mat.cols * 2);
-        let accR = get_mat_acc(res_mat);
-        let accI = get_mat_acc(i_mat);
-        for y in range(0, res_mat.rows) {
-            for x in range(0, res_mat.cols) {
-                accR.write(y, x, accI.read(y / 2, x / 2));
+    }
+
+    res_mat
+}
+
+/* BIG TODO
+fn im2col(kernel: Matrix, img_mat: Matrix, channels: i32, _buf: Buffer, _off: i64) {
+    let buffer = alloc(0, kernel.rows * kernel.cols); // TODO
+
+    for c in parallel(0, channels) {
+        for r in range(0, img_mat.rows) {
+            for c in range(0, img_mat.cols) {
+
+                for i in unroll(kernel.r)
+
             }
         }
-        reshape_matrix(res_mat, res_mat.rows / channels, res_mat.cols * channels)
     }
 }
+*/

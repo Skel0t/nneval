@@ -1,7 +1,7 @@
 fn @print_matrix(mat: Matrix) -> () {
-    for _acc, val, _r, c in iterate_matrix(mat) {
+    for _acc, val, _r, c, chn in iterate_matrix(mat) {
         print_f32(val); print_string("\t");
-        if c == mat.cols - 1 {
+        if c == mat.cols - 1 && chn == mat.channels - 1 {
             print_string("\n");
         }
     }

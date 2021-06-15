@@ -1,9 +1,11 @@
-fn @iterate_matrix(body: fn(AccM, f32, i32, i32) -> ()) {
+fn @iterate_matrix(body: fn(AccM, f32, i32, i32, i32) -> ()) {
 	fn @loop(mat: Matrix) -> () {
 		let acc = get_mat_acc(mat);
-        for r in range(0, mat.rows) {
-            for c in range(0, mat.cols) {
-                @body(acc, acc.read(r, c), r, c);
+        for row in range(0, mat.rows) {
+            for col in range(0, mat.cols) {
+				for chn in range(0, mat.channels) {
+                	@body(acc, acc.read(row, col, chn), row, col, chn);
+				}
             }
         }
 	}
@@ -11,57 +13,15 @@ fn @iterate_matrix(body: fn(AccM, f32, i32, i32) -> ()) {
 	loop
 }
 
-fn @iterate_matrix_par(body: fn(AccM, f32, i32, i32) -> ()) {
+fn @iterate_matrix_par(body: fn(AccM, f32, i32, i32, i32) -> ()) {
 	fn @loop(mat: Matrix) -> () {
 		let acc = get_mat_acc(mat);
-        for r in parallel(0, 0, mat.rows) {
-            for c in range(0, mat.cols) {
-                @body(acc, acc.read(r, c), r, c);
+        for row in parallel(0, 0, mat.rows) {
+            for col in range(0, mat.cols) {
+				for chn in range(0, mat.channels) {
+                	@body(acc, acc.read(row, col, chn), row, col, chn);
+				}
             }
-        }
-	}
-
-	loop
-}
-
-fn @iterate_matrix_row(body: fn(AccM, f32, i32) -> ()) {
-	fn @loop(mat: Matrix, r: i32) -> () {
-		let acc = get_mat_acc(mat);
-        for c in range(0, mat.cols) {
-            @body(acc, acc.read(r, c), c);
-        }
-	}
-
-	loop
-}
-
-fn @iterate_matrix_row_par(body: fn(AccM, f32, i32) -> ()) {
-	fn @loop(mat: Matrix, r: i32) -> () {
-		let acc = get_mat_acc(mat);
-        for c in parallel(0, 0, mat.cols) {
-            @body(acc, acc.read(r, c), c);
-        }
-	}
-
-	loop
-}
-
-fn @iterate_matrix_col(body: fn(f32, i32) -> ()) {
-	fn @loop(mat: Matrix, c: i32) -> () {
-		let acc = get_mat_acc(mat);
-		for r in range(0, mat.rows) {
-            @body(acc.read(r, c), r);
-        }
-	}
-
-	loop
-}
-
-fn @iterate_matrix_col_par(body: fn(f32, i32) -> ()) {
-	fn @loop(mat: Matrix, c: i32) -> () {
-		let acc = get_mat_acc(mat);
-		for r in parallel(0, 0, mat.rows) {
-            @body(acc.read(r, c), r);
         }
 	}
 
@@ -105,32 +65,10 @@ fn @iterate_sparse_row(body: fn(AccS, f32, i32, i32) -> ()) {
 	loop
 }
 
-fn @iterate_sparse_row_par(body: fn(AccS, f32, i32, i32) -> ()) {
-	fn @loop(mat: Sparse, r: i32) -> () {
-		let acc = get_sparse_acc(mat);
-        for c in parallel(0, 0, mat.cols) {
-            @body(acc, acc.readC(r, c), acc.readI(r, c), c);
-        }
-	}
-
-	loop
-}
-
 fn @iterate_sparse_col(body: fn(AccS, f32, i32, i32) -> ()) {
 	fn @loop(mat: Sparse, c: i32) -> () {
 		let acc = get_sparse_acc(mat);
         for r in range(0, mat.rows) {
-            @body(acc, acc.readC(r, c), acc.readI(r, c), r);
-        }
-	}
-
-	loop
-}
-
-fn @iterate_sparse_col_par(body: fn(AccS, f32, i32, i32) -> ()) {
-	fn @loop(mat: Sparse, c: i32) -> () {
-		let acc = get_sparse_acc(mat);
-        for r in parallel(0, 0, mat.rows) {
             @body(acc, acc.readC(r, c), acc.readI(r, c), r);
         }
 	}

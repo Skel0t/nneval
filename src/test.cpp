@@ -3,14 +3,15 @@
 #include "interface.h"
 #include "image.h"
 #include "nn.h"
-/*
-void sparseMult();
+
+// void sparseMult();
 void imageTest();
-void create_conv();*/
+// void create_conv();
 void superres(std::string path, int width, int height);
 
 int main() {
     superres("/home/woshi/Documents/nneval/src/65010.png", 240, 160);
+    // imageTest();
     return 0;
 }
 
@@ -103,35 +104,25 @@ void sparseMult() {
     anydsl_copy(0, arr3, 0, 0, dslarr3.data(), 0, 9 * sizeof(float));
 
     sparse_mult_test(&dslarr1, &dslarr2, &dslarr3);
-}
+}*/
 
 void imageTest() {
-    float kernel1[] = { .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f,
-                        .0f,    .0f,    .0f,     1.f,     .0f,     .0f,    .0f,    .0f,    .0f,
-                        .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f};
-    float kernel2[] = { .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f,
-                        .0f,    .0f,    .0f,     .0,      1.f,     .0f,    .0f,    .0f,    .0f,
-                        .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f};
-    float kernel3[] = { .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f,
-                        .0f,    .0f,    .0f,     .0f,     .0f,     1.f,    .0f,    .0f,    .0f,
-                        .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f};
+    float kernel1[] = { .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .5f,
+                        .0f,    .0f,    .0f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f,
+                        .0f,    .0f,    .5f,     .0f,     .0f,     .0f,    .0f,    .0f,    .0f};
     anydsl::Array<float> dsl_kernel1(sizeof(float) * 27);
-    anydsl::Array<float> dsl_kernel2(sizeof(float) * 27);
-    anydsl::Array<float> dsl_kernel3(sizeof(float) * 27);
     anydsl_copy(0, kernel1, 0, 0, dsl_kernel1.data(), 0, 27 * sizeof(float));
-    anydsl_copy(0, kernel2, 0, 0, dsl_kernel2.data(), 0, 27 * sizeof(float));
-    anydsl_copy(0, kernel3, 0, 0, dsl_kernel3.data(), 0, 27 * sizeof(float));
 
     ImageRgba32 img;
     load_png(FilePath("/home/woshi/Documents/nneval/src/mitchell.png"), img);
 
-    uint8_t* ptr = image_kernel_test(&dsl_kernel1, &dsl_kernel2, &dsl_kernel3, &img.pixels);
+    anydsl::Array<uint8_t> result(sizeof(uint8_t) * 4 * 1920 * 1110 * 3);
+
+    image_kernel_test(&dsl_kernel1, &img.pixels, &result);
+
+    save_png_pointer(FilePath("out.png"), result.data(), 1920 * 2, 2 * 1110);
 
     img.pixels.release();
     dsl_kernel1.release();
-    dsl_kernel2.release();
-    dsl_kernel3.release();
-
-    save_png_pointer(FilePath("out.png"), ptr, 1920, 1110);
+    result.release();
 }
-*/

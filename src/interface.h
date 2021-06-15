@@ -8,7 +8,7 @@ extern "C" {
 
 void sparse_mult_test(anydsl::Array<float>*, anydsl::Array<int>*, anydsl::Array<float>*);
 void create_conv_test(anydsl::Array<float>*, anydsl::Array<float>*);
-uint8_t* image_kernel_test(anydsl::Array<float>*, anydsl::Array<float>*, anydsl::Array<float>*, anydsl::Array<uint8_t>*);
+void image_kernel_test(anydsl::Array<float>* kernel, anydsl::Array<uint8_t>* in, anydsl::Array<uint8_t>* out);
 void sres(anydsl::Array<uint8_t>* in, int32_t width, int32_t height, anydsl::Array<uint8_t>* out, anydsl::Array<float>* kernels, float* biases);
 void offset_matrix_test(anydsl::Array<float>* Buffer, float* biases);
 
