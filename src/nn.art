@@ -82,32 +82,32 @@ fn @make_sres_nn(kernels: Buffer, biases: &[f32], width: i32, height: i32) -> NN
         // Convolution 3
         img_mat = conv2d(in_channels_3, out_channels_3, matrices3, biases3, img_mat, true, false, mem, 0);
         img_mat = leaky_relu(img_mat, mem, img_mat.offset);
-        img_mat = nearest(img_mat, out_channels_3, false, mem, max_size_for_conv);
+        img_mat = nearest(img_mat, out_channels_3, false, mem, 0);
 
         print_string("conv3 done\n");
 
         // Upconvolution 1 (Conv 4)
         // Need to swap offsets now, since the upscaling/recycling before changed the order of images in memory
-        img_mat = conv2d(in_channels_4, out_channels_4, matrices4, biases4, img_mat, true, false, mem, 0);
-        img_mat = leaky_relu(img_mat, mem, max_size_for_conv);
+        img_mat = conv2d(in_channels_4, out_channels_4, matrices4, biases4, img_mat, true, false, mem, max_space_for_img);
+        img_mat = leaky_relu(img_mat, mem, 0);
 
         print_string("conv4 (upconv) done\n");
 
         // Convolution 5
-        img_mat = conv2d(in_channels_5, out_channels_5, matrices5, biases5, img_mat, true, false, mem, 0);
-        img_mat = leaky_relu(img_mat, mem, max_size_for_conv);
+        img_mat = conv2d(in_channels_5, out_channels_5, matrices5, biases5, img_mat, true, false, mem, max_space_for_img);
+        img_mat = leaky_relu(img_mat, mem, 0);
 
         print_string("conv5 done\n");
 
         // Convolution 6
-        img_mat = conv2d(in_channels_6, out_channels_6, matrices6, biases6, img_mat, true, false, mem, 0);
-        img_mat = leaky_relu(img_mat, mem, max_size_for_conv);
+        img_mat = conv2d(in_channels_6, out_channels_6, matrices6, biases6, img_mat, true, false, mem, max_space_for_img);
+        img_mat = leaky_relu(img_mat, mem, 0);
 
         print_string("conv6 done\n");
 
         // Convolution 7
-        img_mat = conv2d(in_channels_7, out_channels_7, matrices7, no_bias, img_mat, false, false, mem, 0);
-        img_mat = make_interleaved(img_mat, out_channels_7, mem, max_size_for_conv);
+        img_mat = conv2d(in_channels_7, out_channels_7, matrices7, no_bias, img_mat, false, false, mem, max_space_for_img);
+        img_mat = make_interleaved(img_mat, out_channels_7, mem, 0);
 
         print_string("conv7 done\n");
 
