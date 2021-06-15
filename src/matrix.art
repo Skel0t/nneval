@@ -34,12 +34,11 @@ fn @make_matrix(buffer: Buffer, offset: i64, format: MemoryFormat, channels: i32
 }
 
 fn @reshape_matrix(m: Matrix, rows: i32, cols: i32) -> Matrix {
-    if m.rows * m.cols == rows * cols {
-        make_matrix(m.buf, m.offset, m.format, m.channels, rows, cols)
-    } else {
-        print_string("reshape failed\n");
+    // if m.rows * m.cols == rows * cols {
+    make_matrix(m.buf, m.offset, m.format, m.channels, rows, cols)
+    /*} else {
         m
-    }
+    }*/
 }
 
 fn @make_sparse(buf: Buffer, offset: i64, rows: i32, cols: i32) -> Sparse {
@@ -48,10 +47,10 @@ fn @make_sparse(buf: Buffer, offset: i64, rows: i32, cols: i32) -> Sparse {
 
 fn @get_sparse_acc(m: Sparse) -> AccS {
     AccS {
-        readC = @|r, c|       { bitcast[&   [f32]](m.buf.data)(m.offset +                   (r * m.cols + c) as i64) },
-        readI = @|r, c|       { bitcast[&   [i32]](m.buf.data)(m.offset + (m.cols * m.rows + r * m.cols + c) as i64) },
-        write = @|r, c, v, i| { bitcast[&mut[f32]](m.buf.data)(m.offset +                   (r * m.cols + c) as i64) = v;
-                                bitcast[&mut[i32]](m.buf.data)(m.offset + (m.cols * m.rows + r * m.cols + c) as i64) = i; }
+        readC = @|r, c|       { bitcast[&   [f32]](m.buf.data)(m.offset + (r * m.cols + c)                   as i64) },
+        readI = @|r, c|       { bitcast[&   [i32]](m.buf.data)(m.offset + (r * m.cols + c + m.cols * m.rows) as i64) },
+        write = @|r, c, v, i| { bitcast[&mut[f32]](m.buf.data)(m.offset + (r * m.cols + c)                   as i64) = v;
+                                bitcast[&mut[i32]](m.buf.data)(m.offset + (r * m.cols + c + m.cols * m.rows) as i64) = i; }
     }
 }
 
@@ -76,7 +75,7 @@ fn @get_mat_acc(m: Matrix) -> AccM {
     }
 }
 
-fn @matmul(a: Matrix, b: Matrix, buf: Buffer, off: i64) -> Matrix {
+fn @matmul(a: Matrix, b: Matrix, buf: Buffer, off: i64) -> Matrix { // Not tested, probably not necessary
     let m = make_matrix(buf, off, MemoryFormat::HWC, 1, a.rows, b.cols);
     let a_acc = get_mat_acc(a);
     let b_acc = get_mat_acc(b);

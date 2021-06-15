@@ -1,4 +1,20 @@
+// Decide how to iterate by checking MemoryFormat
 fn @iterate_matrix(body: fn(AccM, f32, i32, i32, i32) -> ()) {
+	let loop_chw = iterate_matrix_chw(body);
+	let loop_hwc = iterate_matrix_hwc(body);
+	fn @loop(mat: Matrix) -> () {
+		match mat.format {
+			MemoryFormat::CHW => loop_chw(mat),
+			MemoryFormat::HWC => loop_hwc(mat)
+		}
+	}
+
+	loop
+}
+
+// If a specific iteration is necessary, one can choose it here
+
+fn @iterate_matrix_hwc(body: fn(AccM, f32, i32, i32, i32) -> ()) {
 	fn @loop(mat: Matrix) -> () {
 		let acc = get_mat_acc(mat);
         for row in range(0, mat.rows) {
@@ -13,7 +29,37 @@ fn @iterate_matrix(body: fn(AccM, f32, i32, i32, i32) -> ()) {
 	loop
 }
 
+fn @iterate_matrix_chw(body: fn(AccM, f32, i32, i32, i32) -> ()) {
+	fn @loop(mat: Matrix) -> () {
+		let acc = get_mat_acc(mat);
+		for chn in range(0, mat.channels) {
+			for row in range(0, mat.rows) {
+				for col in range(0, mat.cols) {
+					@body(acc, acc.read(row, col, chn), row, col, chn);
+				}
+			}
+        }
+	}
+
+	loop
+}
+
+// Same as not parallel
+
 fn @iterate_matrix_par(body: fn(AccM, f32, i32, i32, i32) -> ()) {
+	let loop_chw = iterate_matrix_chw_par(body);
+	let loop_hwc = iterate_matrix_hwc_par(body);
+	fn @loop(mat: Matrix) -> () {
+		match mat.format {
+			MemoryFormat::CHW => loop_chw(mat),
+			MemoryFormat::HWC => loop_hwc(mat)
+		}
+	}
+
+	loop
+}
+
+fn @iterate_matrix_hwc_par(body: fn(AccM, f32, i32, i32, i32) -> ()) {
 	fn @loop(mat: Matrix) -> () {
 		let acc = get_mat_acc(mat);
         for row in parallel(0, 0, mat.rows) {
@@ -22,6 +68,21 @@ fn @iterate_matrix_par(body: fn(AccM, f32, i32, i32, i32) -> ()) {
                 	@body(acc, acc.read(row, col, chn), row, col, chn);
 				}
             }
+        }
+	}
+
+	loop
+}
+
+fn @iterate_matrix_chw_par(body: fn(AccM, f32, i32, i32, i32) -> ()) {
+	fn @loop(mat: Matrix) -> () {
+		let acc = get_mat_acc(mat);
+		for chn in parallel(0, 0, mat.channels) {
+			for row in range(0, mat.rows) {
+				for col in range(0, mat.cols) {
+					@body(acc, acc.read(row, col, chn), row, col, chn);
+				}
+			}
         }
 	}
 

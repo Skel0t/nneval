@@ -25,8 +25,7 @@ fn @make_matrix_from_image(img: Image, buf: Buffer, off: i64) -> Matrix {
     let m = make_matrix(buf, off, MemoryFormat::HWC, 3, img.height, img.width);
     let acc_i = get_image_acc(img, 3);
 
-    // TODO
-    for acc, _val, row, col, chn in iterate_matrix(m) {
+    for acc, _val, row, col, chn in iterate_matrix_par(m) {
         acc.write(row, col, chn, acc_i.read(col, row, chn) as f32 / 255.0);
     }
 
@@ -41,16 +40,8 @@ fn @make_image_from_matrix(m: Matrix, buf: Buffer) -> Image {
 
     let acc_m = get_mat_acc(m);
 
-    for acc_img, _v, x, y, c in iterate_image(img, 3) {
+    for acc_img, _v, x, y, c in iterate_image(img, 3) { // Using _par here gives artifacts (because we're writing u8's?)
         acc_img.write(x, y, c, (acc_m.read(y, x, c) * 255.0) as u8);
     }
     img
 }
-
-/*
-// Kernel size, Channel count
-fn @im2col(img: Image, ksize: i32, channels: i32, padding:i32, stride: i32) -> () {
-    // TODO: Do I need this? Shouldn't I just use sparse matrices for the weights?
-    // Well then I need <newlayer-depth> many matrix multiplications, like this only one would be necessary
-}
-*/
