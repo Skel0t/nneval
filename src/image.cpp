@@ -79,7 +79,7 @@ bool load_png(const FilePath& path, ImageRgba32& img) {
     std::unique_ptr<png_byte[]> row_bytes(new png_byte[img.width * 3]);
     for (size_t y = 0; y < img.height; y++) {
         png_read_row(png_ptr, row_bytes.get(), nullptr);
-        auto img_row = img.pixels.data() + 3 * img.width * (img.height - 1 - y);
+        auto img_row = img.pixels.data() + 3 * img.width * y; // (img.height - 1 - y);
         for (size_t x = 0; x < img.width; x++) {
             for (size_t c = 0; c < 3; ++c)
                 img_row[x * 3 + c] = row_bytes[x * 3 + c];
@@ -173,7 +173,7 @@ bool save_png_pointer(const FilePath& path, const uint8_t* pixels, const int wid
     png_write_info(png_ptr, info_ptr);
 
     for (size_t y = 0; y < height; y++) {
-        auto img_row = pixels + 3 * width * (height - 1 - y);
+        auto img_row = pixels + 3 * width * y;
         for (size_t x = 0; x < width; x++) {
             row_bytes[x * 4 + 0] = img_row[3*x];
             row_bytes[x * 4 + 1] = img_row[3*x+1];
@@ -218,7 +218,7 @@ bool save_png_grayscale(const FilePath& path, const uint8_t* pixels, const int w
     png_write_info(png_ptr, info_ptr);
 
     for (size_t y = 0; y < height; y++) {
-        auto img_row = pixels + width * (height - 1 - y);
+        auto img_row = pixels + width * y;
         for (size_t x = 0; x < width; x++) {
             row_bytes[x * 4 + 0] = img_row[x];
             row_bytes[x * 4 + 1] = img_row[x];

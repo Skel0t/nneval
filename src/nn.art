@@ -3,7 +3,7 @@ struct NN {
     necess_mem : i64
 }
 
-fn @make_sres_nn(kernels: Buffer, biases: &[f32], width: i32, height: i32) -> NN {
+fn @make_sres_nn_im2col(kernels: Buffer, biases: &[f32], width: i32, height: i32) -> NN {
     // Create parameters for convolutions
     let in_channels_1  = 3;
     let out_channels_1 = 32;
@@ -41,82 +41,90 @@ fn @make_sres_nn(kernels: Buffer, biases: &[f32], width: i32, height: i32) -> NN
     let offset_7 = offset_6 + (ksize_6 * ksize_6 * in_channels_6 * out_channels_6) as i64;
 
     // Kernel matrices higher order functions
-    let matrices1 = @|i: i32| { make_matrix(kernels, offset_1 + (i * ksize_1 * ksize_1 * in_channels_1) as i64, MemoryFormat::HWC, in_channels_1, ksize_1, ksize_1) };
-    let matrices2 = @|i: i32| { make_matrix(kernels, offset_2 + (i * ksize_2 * ksize_2 * in_channels_2) as i64, MemoryFormat::HWC, in_channels_2, ksize_2, ksize_2) };
-    let matrices3 = @|i: i32| { make_matrix(kernels, offset_3 + (i * ksize_3 * ksize_3 * in_channels_3) as i64, MemoryFormat::HWC, in_channels_3, ksize_3, ksize_3) };
-    let matrices4 = @|i: i32| { make_matrix(kernels, offset_4 + (i * ksize_4 * ksize_4 * in_channels_4) as i64, MemoryFormat::HWC, in_channels_4, ksize_4, ksize_4) };
-    let matrices5 = @|i: i32| { make_matrix(kernels, offset_5 + (i * ksize_5 * ksize_5 * in_channels_5) as i64, MemoryFormat::HWC, in_channels_5, ksize_5, ksize_5) };
-    let matrices6 = @|i: i32| { make_matrix(kernels, offset_6 + (i * ksize_6 * ksize_6 * in_channels_6) as i64, MemoryFormat::HWC, in_channels_6, ksize_6, ksize_6) };
-    let matrices7 = @|i: i32| { make_matrix(kernels, offset_7 + (i * ksize_7 * ksize_7 * in_channels_7) as i64, MemoryFormat::HWC, in_channels_7, ksize_7, ksize_7) };
+    let flattened_kernels = |i: i32| {
+        match i {
+            1 => make_matrix(kernels, offset_1, MemoryFormat::CHW, 1, out_channels_1, ksize_1 * ksize_1 * in_channels_1),
+            2 => make_matrix(kernels, offset_2, MemoryFormat::CHW, 1, out_channels_2, ksize_2 * ksize_2 * in_channels_2),
+            3 => make_matrix(kernels, offset_3, MemoryFormat::CHW, 1, out_channels_3, ksize_3 * ksize_3 * in_channels_3),
+            4 => make_matrix(kernels, offset_4, MemoryFormat::CHW, 1, out_channels_4, ksize_4 * ksize_4 * in_channels_4),
+            5 => make_matrix(kernels, offset_5, MemoryFormat::CHW, 1, out_channels_5, ksize_5 * ksize_5 * in_channels_5),
+            6 => make_matrix(kernels, offset_6, MemoryFormat::CHW, 1, out_channels_6, ksize_6 * ksize_6 * in_channels_6),
+            7 => make_matrix(kernels, offset_7, MemoryFormat::CHW, 1, out_channels_7, ksize_7 * ksize_7 * in_channels_7),
+            _ => make_matrix(kernels, offset_1, MemoryFormat::CHW, 1, out_channels_1, ksize_1 * ksize_1 * in_channels_1)
+        }
+    };
 
-    let no_bias   = @|_i:i32| { 0 as f32 };
-    let biases1   = @|i: i32| { biases(i) };
-    let biases2   = @|i: i32| { biases(i + out_channels_1) };
-    let biases3   = @|i: i32| { biases(i + out_channels_1 + out_channels_2) };
-    let biases4   = @|i: i32| { biases(i + out_channels_1 + out_channels_2 + out_channels_3) };
-    let biases5   = @|i: i32| { biases(i + out_channels_1 + out_channels_2 + out_channels_3 + out_channels_4) };
-    let biases6   = @|i: i32| { biases(i + out_channels_1 + out_channels_2 + out_channels_3 + out_channels_4 + out_channels_5) };
+    let biases = |j: i32| {
+        match j {
+            1 => @|i: i32| { biases(i) },
+            2 => @|i: i32| { biases(i + out_channels_1) },
+            3 => @|i: i32| { biases(i + out_channels_1 + out_channels_2) },
+            4 => @|i: i32| { biases(i + out_channels_1 + out_channels_2 + out_channels_3) },
+            5 => @|i: i32| { biases(i + out_channels_1 + out_channels_2 + out_channels_3 + out_channels_4) },
+            6 => @|i: i32| { biases(i + out_channels_1 + out_channels_2 + out_channels_3 + out_channels_4 + out_channels_5) },
+            _ => @|_i:i32| { 0 as f32 }
+        }
+    };
 
     // Calculate necessary memory
-    let max_size_for_conv    = 2 as i64 * (2 * width as i64) * (2 * height as i64) * (ksize_4 * ksize_4 * in_channels_4) as i64  // sparse size
-                             + (2 * width as i64) * (2 * height as i64) * out_channels_4 as i64; // sparse mult prod size
-    let max_space_for_img    = (2 * width as i64) * (2 * height as i64) * out_channels_3 as i64; // space needed to save the image layer data during the forwarding
-    let size_upsampled_mat   = (2 * width as i64) * (2 * height as i64) * in_channels_1 as i64;
+    let size_nearest = (2 * width as i64) * (2 * height as i64) * in_channels_1 as i64;
+    let size_im2col  = (ksize_4 as i64) * (ksize_4 as i64) * (in_channels_4 as i64) * (2 * width as i64) * (2 * height as i64);  // size for im2col matrix
+    let size_img     = (2 * width as i64) * (2 * height as i64) * (out_channels_3 as i64);                                       // size to save matmul output
 
     fn @forward_sres(img: Image, mem: Buffer, out_buf: Buffer) -> () {
-        let mut img_mat = make_matrix_from_image(img, mem, max_size_for_conv);
-        let nearest_mat = nearest(img_mat, mem, max_size_for_conv + max_space_for_img);
+        let mut img_mat = make_matrix_from_image(img, mem, size_im2col);
+        let nearest_mat = nearest(img_mat, mem, size_im2col + size_img);
 
         // Convolution 1
-        img_mat = conv2d(out_channels_1, matrices1, biases1, img_mat, true, mem, 0);
-        img_mat = leaky_relu(img_mat, mem, max_size_for_conv);
+        img_mat = conv_with_im2col(ksize_1, out_channels_1, flattened_kernels(1), biases(1), img_mat, true, mem, 0, size_im2col);
+        img_mat = leaky_relu(img_mat, mem, size_im2col);
 
         print_string("conv1 done\n");
 
         // Convolution 2
-        img_mat = conv2d(out_channels_2, matrices2, biases2, img_mat, true, mem, 0);
-        img_mat = leaky_relu(img_mat, mem, max_size_for_conv);
+        img_mat = conv_with_im2col(ksize_2, out_channels_2, flattened_kernels(2), biases(2), img_mat, true, mem, 0, size_im2col);
+        img_mat = leaky_relu(img_mat, mem, size_im2col);
 
         print_string("conv2 done\n");
 
         // Convolution 3
-        img_mat = conv2d(out_channels_3, matrices3, biases3, img_mat, true, mem, 0);
-        img_mat = leaky_relu(img_mat, mem, img_mat.offset);
-        img_mat = nearest(img_mat, mem, 0);
+        img_mat = conv_with_im2col(ksize_3, out_channels_3, flattened_kernels(3), biases(3), img_mat, true, mem, 0, size_im2col);
+        img_mat = leaky_relu(img_mat, mem, 0);
+        img_mat = nearest(img_mat, mem, size_im2col);
 
         print_string("conv3 done\n");
 
         // Upconvolution 1 (Conv 4)
         // Need to swap offsets now, since the upscaling/recycling before changed the order of images in memory
-        img_mat = conv2d(out_channels_4, matrices4, biases4, img_mat, true, mem, max_space_for_img);
-        img_mat = leaky_relu(img_mat, mem, 0);
+        img_mat = conv_with_im2col(ksize_4, out_channels_4, flattened_kernels(4), biases(4), img_mat, true, mem, 0, size_im2col);
+        img_mat = leaky_relu(img_mat, mem, size_im2col);
 
         print_string("conv4 (upconv) done\n");
 
         // Convolution 5
-        img_mat = conv2d(out_channels_5, matrices5, biases5, img_mat, true, mem, max_space_for_img);
-        img_mat = leaky_relu(img_mat, mem, 0);
+        img_mat = conv_with_im2col(ksize_5, out_channels_5, flattened_kernels(5), biases(5), img_mat, true, mem, 0, size_im2col);
+        img_mat = leaky_relu(img_mat, mem, size_im2col);
 
         print_string("conv5 done\n");
 
         // Convolution 6
-        img_mat = conv2d(out_channels_6, matrices6, biases6, img_mat, true, mem, max_space_for_img);
-        img_mat = leaky_relu(img_mat, mem, 0);
+        img_mat = conv_with_im2col(ksize_6, out_channels_6, flattened_kernels(6), biases(6), img_mat, true, mem, 0, size_im2col);
+        img_mat = leaky_relu(img_mat, mem, size_im2col);
 
         print_string("conv6 done\n");
 
         // Convolution 7
-        img_mat = conv2d(out_channels_7, matrices7, no_bias, img_mat, false, mem, max_space_for_img);
+        img_mat = conv_with_im2col(ksize_7, out_channels_7, flattened_kernels(7), biases(7), img_mat, false, mem, 0, size_im2col);
         img_mat = make_interleaved(img_mat, mem, 0);
 
         print_string("conv7 done\n");
 
         // Add residual image to upscaled one
-        img_mat = add_elem_wise(img_mat, nearest_mat, mem, img_mat.offset);
+        // img_mat = add_elem_wise(img_mat, nearest_mat, mem, img_mat.offset);
 
         // Write result in output buffer
         make_image_from_matrix(img_mat, out_buf);
     }
 
-    NN { forward = forward_sres, necess_mem = 4 * (max_size_for_conv + max_space_for_img + size_upsampled_mat) }
+    NN { forward = forward_sres, necess_mem = 4 * (size_nearest + size_im2col + size_img) }
 }

@@ -2,20 +2,23 @@
 fn @sres(img_buf: &Buffer, width: i32, height: i32, out_buf: &Buffer, kernels: &Buffer, biases: &[f32]) -> () {
     let img = make_image(*img_buf, width, height);
 
-    let nn = make_sres_nn(*kernels, biases, width, height);
+    let nn = make_sres_nn_im2col(*kernels, biases, width, height);
     let mem = alloc(0, nn.necess_mem);
     nn.forward(img, mem, *out_buf);
     release(mem);
 }
 
 #[export]
-fn offset_matrix_test(kernels: &Buffer, _biases: &[f32]) -> () {
-    let bc = bitcast[&mut[f32]](kernels.data);
+fn im2col_test(img_buf: &Buffer, width: i32, height: i32, kernels: &Buffer, out_buf: &Buffer) -> () {
+    let img = make_image(*img_buf, width, height);
 
-    print_f32(bc(0)); print_string("\n");
-    print_f32(bc(5 * 5 *  3 * 32)); print_string("\n");
-    print_f32(bc(5 * 5 *  3 * 32 + 3 * 3 * 32 * 64)); print_string("\n");
-    print_f32(bc(5 * 5 *  3 * 32 + 3 * 3 * 32 * 64 + 3 * 3 * 64 * 64)); print_string("\n");
+    let mem = alloc(0, width as i64 * height as i64 * 3 * 4);
+
+    let kernel  = make_matrix(*kernels, 0, MemoryFormat::HWC, 3, 3, 3);
+    let img_mat = make_matrix_from_image(img, mem, 0);
+    make_image_from_matrix(img_mat, *out_buf);
+
+    im2col(kernel.cols, img_mat, 1, mem, 0);
 }
 
 #[export]

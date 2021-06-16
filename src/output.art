@@ -7,6 +7,15 @@ fn @print_matrix(mat: Matrix) -> () {
     }
 }
 
+fn @print_matrix_chw(mat: Matrix) -> () {
+    for _acc, val, _r, c, _chn in iterate_matrix_chw(mat) {
+        print_f32(val); print_string("\t");
+        if c == mat.cols - 1 {
+            print_string("\n");
+        }
+    }
+}
+
 fn @print_sparse_content(mat: Sparse) -> () {
     for _acc, val, _i, _r, c in iterate_sparse(mat) {
         print_f32(val); print_string("\t");

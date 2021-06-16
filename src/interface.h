@@ -8,6 +8,7 @@ extern "C" {
 
 void image_kernel_test(anydsl::Array<float>* kernel, anydsl::Array<uint8_t>* in, anydsl::Array<uint8_t>* out);
 void sres(anydsl::Array<uint8_t>* in, int32_t width, int32_t height, anydsl::Array<uint8_t>* out, anydsl::Array<float>* kernels, float* biases);
+void im2col_test(anydsl::Array<uint8_t>* in, int32_t width, int32_t height, anydsl::Array<float>* kernels, anydsl::Array<uint8_t>* out);
 
 #ifdef __cplusplus
 }

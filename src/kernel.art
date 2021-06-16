@@ -142,18 +142,51 @@ fn @nearest(img_mat: Matrix, buf: Buffer, off: i64) -> Matrix {
     res_mat
 }
 
-/* BIG TODO
-fn im2col(kernel: Matrix, img_mat: Matrix, channels: i32, _buf: Buffer, _off: i64) {
-    let buffer = alloc(0, kernel.rows * kernel.cols); // TODO
+fn conv_with_im2col(ksize: i32, out_channels: i32, flattened_kernels: Matrix, biases: fn(i32) -> f32, img_mat: Matrix, use_bias: bool, buf: Buffer, off: i64, off_res: i64) -> Matrix {
+    let width  = img_mat.cols;
+    let height = img_mat.rows;
 
-    for c in parallel(0, channels) {
-        for r in range(0, img_mat.rows) {
-            for c in range(0, img_mat.cols) {
+    let im2col_mat = im2col(ksize, img_mat, ksize / 2, buf, off);
+    let out_mat = matmul(flattened_kernels, im2col_mat, buf, off_res);
 
-                for i in unroll(kernel.r)
+    if use_bias {
+        for acc, v, row, col, chn in iterate_matrix(out_mat) {
+            acc.write(row, col, chn, v + biases(row));  // 1 channel per row
+        }
+    }
 
+    make_matrix(buf, off_res, MemoryFormat::CHW, out_channels, height, width)
+}
+
+// TODO: Change f32's to own type and use sizeof[type]() instead of 4
+fn im2col(ksize: i32, img_mat: Matrix, padding: i32, buf: Buffer, off: i64) -> Matrix {
+    let img_s  = img_mat.cols * img_mat.rows;
+
+    let bc = bitcast[&mut[f32]](buf.data);
+
+    let res_mat = make_matrix(buf, off, MemoryFormat::CHW, 1, img_mat.channels * ksize * ksize, img_mat.rows * img_mat.cols);
+
+    for img_acc, _val, row, col, chn in iterate_matrix_par(img_mat) {
+        let mut base_row = ksize * ksize * img_s * chn;
+        let base_col = row * img_mat.cols + col;
+
+        let p_row = row - padding;
+        let p_col = col - padding;
+
+        for y in unroll(0, ksize) {
+            for x in unroll(0, ksize) {
+                let h = p_row + y;
+                let w = p_col + x;
+                if h < 0 || w < 0 || h >= img_mat.rows || w > img_mat.cols {
+                    bc(off + (base_row + base_col) as i64) = 0;
+                } else {
+                    bc(off + (base_row + base_col) as i64) = img_acc.read(h, w, chn);
+                }
+
+                base_row += img_s;
             }
         }
     }
+
+    res_mat
 }
-*/
