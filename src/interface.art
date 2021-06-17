@@ -22,7 +22,7 @@ fn @sres_conv_mat(img_buf: &Buffer, width: i32, height: i32, out_buf: &Buffer, k
 
 
 #[export]
-fn im2col_test(img_buf: &Buffer, width: i32, height: i32, kernels: &Buffer, out_buf: &Buffer) -> () {
+fn @im2col_test(img_buf: &Buffer, width: i32, height: i32, kernels: &Buffer, out_buf: &Buffer) -> () {
     let img = make_image(*img_buf, width, height);
 
     let mem = alloc(0, width as i64 * height as i64 * 3 * 4);
@@ -35,7 +35,7 @@ fn im2col_test(img_buf: &Buffer, width: i32, height: i32, kernels: &Buffer, out_
 }
 
 #[export]
-fn image_kernel_test(kernel: &Buffer, img_buf: &Buffer, out_buf: &Buffer) -> () {
+fn @image_kernel_test(kernel: &Buffer, img_buf: &Buffer, out_buf: &Buffer) -> () {
     let height = 1110;
     let width  = 1920;
     let ksize  = 3;

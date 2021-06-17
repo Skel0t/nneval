@@ -120,7 +120,7 @@ fn @make_sres_nn_im2col(kernels: Buffer, biases: &[f32], width: i32, height: i32
         print_string("conv7 done\n");
 
         // Add residual image to upscaled one
-        // img_mat = add_elem_wise(img_mat, nearest_mat, mem, img_mat.offset);
+        img_mat = add_elem_wise(img_mat, nearest_mat, mem, img_mat.offset);
 
         // Write result in output buffer
         make_image_from_matrix(img_mat, out_buf);
@@ -238,7 +238,7 @@ fn @make_sres_nn_conv_mat(kernels: Buffer, biases: &[f32], width: i32, height: i
         print_string("conv7 done\n");
 
         // Add residual image to upscaled one
-        // img_mat = add_elem_wise(img_mat, nearest_mat, mem, img_mat.offset);
+        img_mat = add_elem_wise(img_mat, nearest_mat, mem, img_mat.offset);
 
         // Write result in output buffer
         make_image_from_matrix(img_mat, out_buf);

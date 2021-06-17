@@ -130,10 +130,8 @@ fn @make_interleaved(img_mat: Matrix, buf: Buffer, off: i64) -> Matrix {
 }
 
 fn @nearest(img_mat: Matrix, buf: Buffer, off: i64) -> Matrix {
-    print_string("nearest\n");
     let res_mat = make_matrix(buf, off, img_mat.format, img_mat.channels, img_mat.rows * 2, img_mat.cols * 2);
 
-    let res_acc = get_mat_acc(res_mat);
     let img_acc = get_mat_acc(img_mat);
 
     for res_acc, _v, row, col, chn in iterate_matrix_par(res_mat) {
@@ -143,7 +141,7 @@ fn @nearest(img_mat: Matrix, buf: Buffer, off: i64) -> Matrix {
     res_mat
 }
 
-fn conv_with_im2col(ksize: i32, out_channels: i32, flattened_kernels: Matrix, biases: fn(i32) -> f32, img_mat: Matrix, use_bias: bool, buf: Buffer, off: i64, off_res: i64) -> Matrix {
+fn @conv_with_im2col(ksize: i32, out_channels: i32, flattened_kernels: Matrix, biases: fn(i32) -> f32, img_mat: Matrix, use_bias: bool, buf: Buffer, off: i64, off_res: i64) -> Matrix {
     let width  = img_mat.cols;
     let height = img_mat.rows;
 
@@ -160,7 +158,7 @@ fn conv_with_im2col(ksize: i32, out_channels: i32, flattened_kernels: Matrix, bi
 }
 
 // TODO: Change f32's to own type and use sizeof[type]() instead of 4
-fn im2col(ksize: i32, img_mat: Matrix, padding: i32, buf: Buffer, off: i64) -> Matrix {
+fn @im2col(ksize: i32, img_mat: Matrix, padding: i32, buf: Buffer, off: i64) -> Matrix {
     let img_s  = img_mat.cols * img_mat.rows;
 
     let bc = bitcast[&mut[f32]](buf.data);
