@@ -11,6 +11,7 @@ void superres_im2col(std::string path, int width, int height);
 
 int main() {
     superres_im2col("/home/woshi/Documents/nneval/src/65010.png", 240, 160);
+    superres_conv_mat("/home/woshi/Documents/nneval/src/65010.png", 240, 160);
     return 0;
 }
 
@@ -47,7 +48,7 @@ void im2col(std::string path, int width, int height) {
 
     im2col_test(&img.pixels, width, height, &weights, &result);
 
-    save_png_pointer(FilePath("out.png"), img.pixels.data(), width, height);
+    save_png_pointer(FilePath("out_im2col.png"), img.pixels.data(), width, height);
 
     // Free all allocated memory
     weights.release();
@@ -98,9 +99,9 @@ void superres_im2col(std::string path, int width, int height) {
     load_png(FilePath(path), img);
     anydsl::Array<uint8_t> result(sizeof(uint8_t) * (2 * width) * (2 * height) * 3);
 
-    sres(&img.pixels, width, height, &result, &weights, biases);
+    sres_im2col(&img.pixels, width, height, &result, &weights, biases);
 
-    save_png_pointer(FilePath("out.png"), result.data(), width * 2, height * 2);
+    save_png_pointer(FilePath("out_im2col.png"), result.data(), width * 2, height * 2);
 
     // Free all allocated memory
     weights.release();
@@ -152,9 +153,9 @@ void superres_conv_mat(std::string path, int width, int height) {
     load_png(FilePath(path), img);
     anydsl::Array<uint8_t> result(sizeof(uint8_t) * (2 * width) * (2 * height) * 3);
 
-    sres(&img.pixels, width, height, &result, &weights, biases);
+    sres_conv_mat(&img.pixels, width, height, &result, &weights, biases);
 
-    save_png_pointer(FilePath("out.png"), result.data(), width * 2, height * 2);
+    save_png_pointer(FilePath("out_convmat.png"), result.data(), width * 2, height * 2);
 
     // Free all allocated memory
     weights.release();

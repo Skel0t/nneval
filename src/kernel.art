@@ -130,12 +130,13 @@ fn @make_interleaved(img_mat: Matrix, buf: Buffer, off: i64) -> Matrix {
 }
 
 fn @nearest(img_mat: Matrix, buf: Buffer, off: i64) -> Matrix {
+    print_string("nearest\n");
     let res_mat = make_matrix(buf, off, img_mat.format, img_mat.channels, img_mat.rows * 2, img_mat.cols * 2);
 
     let res_acc = get_mat_acc(res_mat);
     let img_acc = get_mat_acc(img_mat);
 
-    for res_acc, _v, row, col, chn in iterate_matrix(res_mat) { // Using _par here SEGFAULTs, why?
+    for res_acc, _v, row, col, chn in iterate_matrix_par(res_mat) {
         res_acc.write(row, col, chn, img_acc.read(row / 2, col / 2, chn));
     }
 
@@ -147,10 +148,10 @@ fn conv_with_im2col(ksize: i32, out_channels: i32, flattened_kernels: Matrix, bi
     let height = img_mat.rows;
 
     let im2col_mat = im2col(ksize, img_mat, ksize / 2, buf, off);
-    let out_mat = matmul(flattened_kernels, im2col_mat, buf, off_res);
+    let prod       = matmul(flattened_kernels, im2col_mat, buf, off_res);
 
     if use_bias {
-        for acc, v, row, col, chn in iterate_matrix(out_mat) {
+        for acc, v, row, col, chn in iterate_matrix_par(prod) {
             acc.write(row, col, chn, v + biases(row));  // 1 channel per row
         }
     }

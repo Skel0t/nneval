@@ -1,12 +1,25 @@
 #[export]
-fn @sres(img_buf: &Buffer, width: i32, height: i32, out_buf: &Buffer, kernels: &Buffer, biases: &[f32]) -> () {
+fn @sres_im2col(img_buf: &Buffer, width: i32, height: i32, out_buf: &Buffer, kernels: &Buffer, biases: &[f32]) -> () {
     let img = make_image(*img_buf, width, height);
 
     let nn = make_sres_nn_im2col(*kernels, biases, width, height);
     let mem = alloc(0, nn.necess_mem);
+    print_i64(nn.necess_mem); print_string("\n");
     nn.forward(img, mem, *out_buf);
     release(mem);
 }
+
+#[export]
+fn @sres_conv_mat(img_buf: &Buffer, width: i32, height: i32, out_buf: &Buffer, kernels: &Buffer, biases: &[f32]) -> () {
+    let img = make_image(*img_buf, width, height);
+
+    let nn = make_sres_nn_conv_mat(*kernels, biases, width, height);
+    let mem = alloc(0, nn.necess_mem);
+    print_i64(nn.necess_mem); print_string("\n");
+    nn.forward(img, mem, *out_buf);
+    release(mem);
+}
+
 
 #[export]
 fn im2col_test(img_buf: &Buffer, width: i32, height: i32, kernels: &Buffer, out_buf: &Buffer) -> () {
