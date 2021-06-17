@@ -146,11 +146,13 @@ fn @conv_with_im2col(ksize: i32, out_channels: i32, flattened_kernels: Matrix, b
     let height = img_mat.rows;
 
     let im2col_mat = im2col(ksize, img_mat, ksize / 2, buf, off);
-    let prod       = matmul(flattened_kernels, im2col_mat, buf, off_res);
+    let prod       = mkl_matmul(flattened_kernels, im2col_mat, buf, off_res);
 
     if use_bias {
-        for acc, v, row, col, chn in iterate_matrix_par(prod) {
-            acc.write(row, col, chn, v + biases(row));  // 1 channel per row
+        for row in range(0, prod.rows) {
+            let offset = 4 * (prod.offset + (row * prod.cols) as i64);
+            mkl_add_constant(/*n*/ prod.cols, /*a*/ bitcast[&[f32]](&(prod.buf.data(offset))),
+                             /*val*/ biases(row), /*res*/ bitcast[&mut[f32]](&(prod.buf.data(offset))));    // 1 channel per row
         }
     }
 

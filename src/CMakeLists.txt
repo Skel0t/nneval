@@ -16,6 +16,7 @@ set(NN_SRCS
     file_path.h
     test.cpp
     image.cpp
+    mkl_cblas.cpp
 )
 
 anydsl_runtime_wrap(NN_OBJS
@@ -25,12 +26,15 @@ anydsl_runtime_wrap(NN_OBJS
     ARTIC_FLAGS --log-level info
     FILES ${ART_SRCS})
 
+set(BLA_VENDOR Intel10_64lp)
+
+find_package(LAPACK REQUIRED)
 find_package(PNG REQUIRED)
 find_package(LZ4 REQUIRED)
 
 add_executable(nneval ${NN_SRCS} ${NN_OBJS})
 target_include_directories(nneval PUBLIC ${LZ4_INCLUDE_DIR})
-target_link_libraries(nneval ${AnyDSL_runtime_LIBRARIES} ${LZ4_LIBRARY} ${PNG_LIBRARIES})
+target_link_libraries(nneval ${AnyDSL_runtime_LIBRARIES} ${LZ4_LIBRARY} ${PNG_LIBRARIES} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
 
 if (COLORIZE)
     target_compile_definitions(nneval PUBLIC -DCOLORIZE)

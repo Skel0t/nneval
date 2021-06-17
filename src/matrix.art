@@ -75,7 +75,7 @@ fn @get_mat_acc(m: Matrix) -> AccM {
     }
 }
 
-fn @matmul(a: Matrix, b: Matrix, buf: Buffer, off: i64) -> Matrix { // Not tested, probably not necessary
+fn @matmul(a: Matrix, b: Matrix, buf: Buffer, off: i64) -> Matrix {
     let m = make_matrix(buf, off, MemoryFormat::HWC, 1, a.rows, b.cols);
     let a_acc = get_mat_acc(a);
     let b_acc = get_mat_acc(b);
@@ -87,6 +87,16 @@ fn @matmul(a: Matrix, b: Matrix, buf: Buffer, off: i64) -> Matrix { // Not teste
         }
     }
     m
+}
+
+// Need to have same channel format
+fn @mkl_matmul(a: Matrix, b: Matrix, buf: Buffer, off: i64) {
+    let c = make_matrix(buf, off, MemoryFormat::HWC, 1, a.rows, b.cols);
+    mkl_blas_mm_mult(/*m*/ a.rows, /*n*/ b.cols, /*k*/ a.cols,
+        /*a*/ bitcast[&   [f32]](&(a.buf.data(4 * a.offset))), /*lda*/ a.cols,
+        /*b*/ bitcast[&   [f32]](&(b.buf.data(4 * b.offset))), /*ldb*/ b.cols,
+        /*c*/ bitcast[&mut[f32]](&(c.buf.data(4 * c.offset))), /*ldc*/ b.cols);
+        c
 }
 
 fn @sparse_mult(a: Sparse, b: Matrix, buf: Buffer, off: i64) -> Matrix {
@@ -102,7 +112,7 @@ fn @sparse_mult(a: Sparse, b: Matrix, buf: Buffer, off: i64) -> Matrix {
     m
 }
 
-fn @add_elem_wise(mat1: Matrix, mat2: Matrix, buf: Buffer, off: i64) -> Matrix {
+fn @add_element_wise(mat1: Matrix, mat2: Matrix, buf: Buffer, off: i64) -> Matrix {
     let res = make_matrix(buf, off, mat1.format, mat1.channels, mat1.rows, mat1.cols);
 
     let res_acc  = get_mat_acc(res);
@@ -111,4 +121,15 @@ fn @add_elem_wise(mat1: Matrix, mat2: Matrix, buf: Buffer, off: i64) -> Matrix {
         res_acc.write(r, c, chn, mat2_acc.read(r, c, chn) + v);
     }
     res
+}
+
+// Need to have same channel format!
+fn @mkl_add_element_wise(a: Matrix, b: Matrix, buf: Buffer, off: i64) -> Matrix {
+    let c = make_matrix(buf, off, a.format, a.channels, a.rows, a.cols);
+
+    let num_elements = a.rows * a.cols * a.channels;
+    mkl_add_elemwise(num_elements, bitcast[&   [f32]](&(a.buf.data(4 * a.offset))),
+                                   bitcast[&   [f32]](&(b.buf.data(4 * b.offset))),
+                                   bitcast[&mut[f32]](&(c.buf.data(4 * c.offset))));
+    c
 }
