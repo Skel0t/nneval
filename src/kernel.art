@@ -112,12 +112,21 @@ fn @leaky_relu(img_mat: Matrix, buf: Buffer, off: i64) -> Matrix {
     res
 }
 
+fn @mkl_relu(img_mat: Matrix, buf: Buffer, off: i64) -> Matrix {
+    let res = make_matrix(buf, off, img_mat.format, img_mat.channels, img_mat.rows, img_mat.cols);
+
+    let n = img_mat.channels * img_mat.rows * img_mat.cols;
+
+    mkl_apply_relu(n, bitcast[&[f32]](&(img_mat.buf.data(4 * img_mat.offset))), bitcast[&mut[f32]](&(res.buf.data(4 * res.offset))));
+    res
+}
+
 fn @max(x: f32, y: f32) -> f32 {
     select(x > y, x, y)
 }
 
 // Rewrites CHW and to HWC by copying
-fn @make_interleaved(img_mat: Matrix, buf: Buffer, off: i64) -> Matrix {
+fn @chw_to_hwc(img_mat: Matrix, buf: Buffer, off: i64) -> Matrix {
     let res = make_matrix(buf, off, MemoryFormat::HWC, img_mat.channels, img_mat.rows, img_mat.cols);
 
     let img_acc = get_mat_acc(img_mat);
@@ -161,15 +170,16 @@ fn @conv_with_im2col(ksize: i32, out_channels: i32, flattened_kernels: Matrix, b
 
 // TODO: Change f32's to own type and use sizeof[type]() instead of 4
 fn @im2col(ksize: i32, img_mat: Matrix, padding: i32, buf: Buffer, off: i64) -> Matrix {
-    let img_s  = img_mat.cols * img_mat.rows;
+    let img_s    = (img_mat.cols as i64) * (img_mat.rows as i64);
+    let ksize_sq = (ksize as i64) * (ksize as i64);
 
     let bc = bitcast[&mut[f32]](buf.data);
 
-    let res_mat = make_matrix(buf, off, MemoryFormat::CHW, 1, img_mat.channels * ksize * ksize, img_mat.rows * img_mat.cols);
+    let res_mat = make_matrix(buf, off, MemoryFormat::CHW, 1, img_mat.channels * ksize_sq as i32, img_s as i32);
 
     for img_acc, _val, row, col, chn in iterate_matrix_par(img_mat) {
-        let mut base_row = ksize * ksize * img_s * chn;
-        let base_col = row * img_mat.cols + col;
+        let mut base_row = ksize_sq * img_s * (chn as i64);
+        let base_col = (row as i64) * (img_mat.cols as i64) + (col as i64);
 
         let p_row = row - padding;
         let p_col = col - padding;
@@ -178,10 +188,10 @@ fn @im2col(ksize: i32, img_mat: Matrix, padding: i32, buf: Buffer, off: i64) -> 
             for x in unroll(0, ksize) {
                 let h = p_row + y;
                 let w = p_col + x;
-                if h < 0 || w < 0 || h >= img_mat.rows || w > img_mat.cols {
-                    bc(off + (base_row + base_col) as i64) = 0;
+                if h < 0 || w < 0 || h >= img_mat.rows || w >= img_mat.cols {
+                    bc(off + base_row + base_col) = 0;
                 } else {
-                    bc(off + (base_row + base_col) as i64) = img_acc.read(h, w, chn);
+                    bc(off + base_row + base_col) = img_acc.read(h, w, chn);
                 }
 
                 base_row += img_s;

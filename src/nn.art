@@ -41,7 +41,7 @@ fn @make_sres_nn_im2col(kernels: Buffer, biases: &[f32], width: i32, height: i32
     let offset_7 = offset_6 + (ksize_6 * ksize_6 * in_channels_6 * out_channels_6) as i64;
 
     // Kernel matrices higher order functions
-    let flattened_kernels = |i: i32| {
+    let flattened_kernels = @|i: i32| {
         match i {
             1 => make_matrix(kernels, offset_1, MemoryFormat::CHW, 1, out_channels_1, ksize_1 * ksize_1 * in_channels_1),
             2 => make_matrix(kernels, offset_2, MemoryFormat::CHW, 1, out_channels_2, ksize_2 * ksize_2 * in_channels_2),
@@ -54,7 +54,7 @@ fn @make_sres_nn_im2col(kernels: Buffer, biases: &[f32], width: i32, height: i32
         }
     };
 
-    let biases = |j: i32| {
+    let biases = @|j: i32| {
         match j {
             1 => @|i: i32| { biases(i) },
             2 => @|i: i32| { biases(i + out_channels_1) },
@@ -77,19 +77,19 @@ fn @make_sres_nn_im2col(kernels: Buffer, biases: &[f32], width: i32, height: i32
 
         // Convolution 1
         img_mat = conv_with_im2col(ksize_1, out_channels_1, flattened_kernels(1), biases(1), img_mat, true, mem, 0, size_im2col);
-        img_mat = leaky_relu(img_mat, mem, size_im2col);
+        img_mat = mkl_relu(img_mat, mem, size_im2col);
 
         print_string("conv1 done\n");
 
         // Convolution 2
         img_mat = conv_with_im2col(ksize_2, out_channels_2, flattened_kernels(2), biases(2), img_mat, true, mem, 0, size_im2col);
-        img_mat = leaky_relu(img_mat, mem, size_im2col);
+        img_mat = mkl_relu(img_mat, mem, size_im2col);
 
         print_string("conv2 done\n");
 
         // Convolution 3
         img_mat = conv_with_im2col(ksize_3, out_channels_3, flattened_kernels(3), biases(3), img_mat, true, mem, 0, size_im2col);
-        img_mat = leaky_relu(img_mat, mem, 0);
+        img_mat = mkl_relu(img_mat, mem, 0);
         img_mat = nearest(img_mat, mem, size_im2col);
 
         print_string("conv3 done\n");
@@ -97,25 +97,25 @@ fn @make_sres_nn_im2col(kernels: Buffer, biases: &[f32], width: i32, height: i32
         // Upconvolution 1 (Conv 4)
         // Need to swap offsets now, since the upscaling/recycling before changed the order of images in memory
         img_mat = conv_with_im2col(ksize_4, out_channels_4, flattened_kernels(4), biases(4), img_mat, true, mem, 0, size_im2col);
-        img_mat = leaky_relu(img_mat, mem, size_im2col);
+        img_mat = mkl_relu(img_mat, mem, size_im2col);
 
         print_string("conv4 (upconv) done\n");
 
         // Convolution 5
         img_mat = conv_with_im2col(ksize_5, out_channels_5, flattened_kernels(5), biases(5), img_mat, true, mem, 0, size_im2col);
-        img_mat = leaky_relu(img_mat, mem, size_im2col);
+        img_mat = mkl_relu(img_mat, mem, size_im2col);
 
         print_string("conv5 done\n");
 
         // Convolution 6
         img_mat = conv_with_im2col(ksize_6, out_channels_6, flattened_kernels(6), biases(6), img_mat, true, mem, 0, size_im2col);
-        img_mat = leaky_relu(img_mat, mem, size_im2col);
+        img_mat = mkl_relu(img_mat, mem, size_im2col);
 
         print_string("conv6 done\n");
 
         // Convolution 7
         img_mat = conv_with_im2col(ksize_7, out_channels_7, flattened_kernels(7), biases(7), img_mat, false, mem, 0, size_im2col);
-        img_mat = make_interleaved(img_mat, mem, 0);
+        img_mat = chw_to_hwc(img_mat, mem, 0);
 
         print_string("conv7 done\n");
 
@@ -233,7 +233,7 @@ fn @make_sres_nn_conv_mat(kernels: Buffer, biases: &[f32], width: i32, height: i
 
         // Convolution 7
         img_mat = conv2d(out_channels_7, matrices7, no_bias, img_mat, false, mem, max_space_for_img);
-        img_mat = make_interleaved(img_mat, mem, 0);
+        img_mat = chw_to_hwc(img_mat, mem, 0);
 
         print_string("conv7 done\n");
 

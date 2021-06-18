@@ -28,4 +28,12 @@ extern "C" {
     void mkl_add_elemwise(int32_t n, const float* a, const float* b, float* c) {
         vsAdd(n, a, b, c);
     }
+
+    /**
+     * Elementwise max(0, x) for each element in a and stores it in c
+     */
+    void mkl_apply_relu(int32_t n, const float* a, float* c) {
+        float zero = 0;
+        vsFmaxI(n, a, 1, &zero, 0, c, 1);
+    }
 }
