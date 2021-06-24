@@ -163,14 +163,49 @@ fn @conv_with_im2col(ksize: i32, out_channels: i32, flattened_kernels: Matrix, b
 }
 
 // TODO: Change f32's to own type and use sizeof[type]() instead of 4
+// Only supporting stride of 1
 fn @im2col(ksize: i32, img_mat: Matrix, padding: i32, buf: Buffer, off: i64) -> Matrix {
-    let img_s    = (img_mat.cols as i64) * (img_mat.rows as i64);
+    // insize == outsize if padding == ksize / 2.0 - 1
+    let out_width  = (img_mat.cols + 2 * padding - ksize) + 1;
+    let out_height = (img_mat.rows + 2 * padding - ksize) + 1;
+    let out_chns   = img_mat.channels;
+
+    let img_s    = (out_width as i64) * (out_height as i64);
     let ksize_sq = (ksize as i64) * (ksize as i64);
 
     let bc = bitcast[&mut[f32]](buf.data);
 
-    let res_mat = make_matrix(buf, off, MemoryFormat::CHW, 1, img_mat.channels * ksize_sq as i32, img_s as i32);
+    let res_mat = make_matrix(buf, off, MemoryFormat::CHW, 1, out_chns * ksize_sq as i32, img_s as i32);
+    let img_acc = get_mat_acc(img_mat);
 
+    for chn in range(0, out_chns) {
+        for base_col in range(0, img_s as i32) {
+            let mut base_row = (chn as i64) * (img_s * ksize_sq);
+
+            let row = base_col / out_width;
+            let col = base_col % out_width;
+
+            let p_row = row - padding;
+            let p_col = col - padding;
+
+            for y in unroll(0, ksize) {
+                for x in unroll(0, ksize) {
+                    let h = p_row + y;
+                    let w = p_col + x;
+
+                    if h < 0 || w < 0 || h >= img_mat.rows || w >= img_mat.cols {
+                        bc(off + base_row + (base_col as i64)) = 0;
+                    } else {
+                        bc(off + base_row + (base_col as i64)) = img_acc.read(h, w, chn);
+                    }
+
+                    base_row += img_s;
+                }
+            }
+
+        }
+    }
+/*
     for img_acc, _val, row, col, chn in iterate_matrix_par(img_mat) {
         let mut base_row = ksize_sq * img_s * (chn as i64);
         let base_col = (row as i64) * (img_mat.cols as i64) + (col as i64);
@@ -192,6 +227,7 @@ fn @im2col(ksize: i32, img_mat: Matrix, padding: i32, buf: Buffer, off: i64) -> 
             }
         }
     }
+*/
 
     res_mat
 }

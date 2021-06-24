@@ -10,7 +10,7 @@ void superres_conv_mat(std::string path);
 void superres_im2col(std::string path);
 
 int main() {
-    superres_im2col("/home/woshi/Documents/nneval/src/orig.png");
+    superres_im2col("/home/woshi/Documents/nneval/src/65010.png");
     return 0;
 }
 
