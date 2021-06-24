@@ -71,28 +71,22 @@ fn @conv2d(out_channels: i32, kernels: fn(i32) -> Matrix, biases: fn(i32) -> f32
     make_matrix(buf, off + sparse_size, MemoryFormat::CHW, out_channels, height, width)
 }
 
-// BIG TODO
-/*fn @max_pool(img_mat: Matrix, ksize: i32, channels:i32) -> Matrix {
-    let buffer = alloc(0, 4 * img_mat.cols as i64 * img_mat.rows as i64 / (ksize * ksize) as i64);
+fn @max_pool_2(img_mat: Matrix, buf: Buffer, off: i64) -> Matrix {
+    let res_mat = make_matrix(buf, off, img_mat.format, img_mat.channels, img_mat.rows / 2, img_mat.cols / 2);
+    let img_acc = get_mat_acc(img_mat);
 
-    let acc     = bitcast[&mut[f32]](buffer.data);
-    let img_acc = bitcast[&[f32]](img_mat.buf.data);
-    for i in unroll(0, channels) {
-        for y in range(0, img_mat.rows / 2) {
-            for x in range(0, img_mat.cols / (channels * 2)) {
-                let v11 = img_acc((i * img_mat.cols * img_mat.rows / channels) +  2*y    * img_mat.cols / channels + 2*x);
-                let v12 = img_acc((i * img_mat.cols * img_mat.rows / channels) +  2*y    * img_mat.cols / channels + 2*x+1);
-                let v21 = img_acc((i * img_mat.cols * img_mat.rows / channels) + (2*y+1) * img_mat.cols / channels + 2*x);
-                let v22 = img_acc((i * img_mat.cols * img_mat.rows / channels) + (2*y+1) * img_mat.cols / channels + 2*x+1);
+    for r_acc, _v, row, col, chn in iterate_matrix_par(res_mat) {
+        let v12 = img_acc.read(2 * row    , 2 * col    , chn);
+        let v21 = img_acc.read(2 * row    , 2 * col + 1, chn);
+        let v11 = img_acc.read(2 * row + 1, 2 * col    , chn);
+        let v22 = img_acc.read(2 * row + 1, 2 * col + 1, chn);
 
-                let val = max(max(v11, v12), max(v21, v22));
-                acc((i * img_mat.cols * img_mat.rows / (channels * 4)) + y * (img_mat.cols / (channels * 2)) + x) = val;
-            }
-        }
+        let val = max(max(v11, v12), max(v21, v22));
+        r_acc.write(row, col, chn, val);
     }
-    release(img_mat.buf);
-    make_matrix(buffer, 0, img_mat.rows / 2, img_mat.cols / 2)
-}*/
+
+    res_mat
+}
 
 fn @leaky_relu(img_mat: Matrix, buf: Buffer, off: i64) -> Matrix {
     fn @leaky_relu_x(neg_slope: f32, x: f32) -> f32 {
