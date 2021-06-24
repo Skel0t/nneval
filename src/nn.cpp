@@ -4,7 +4,7 @@
 #include "interface.h"
 #include "nn.h"
 
-void read_in_weigths_hwc(anydsl::Array<float>* buffer, int offset, std::string path, int in_channels, int out_channels, int ksize) {
+void read_in_weigths_hwc(float* buffer, int offset, std::string path, int in_channels, int out_channels, int ksize) {
     std::fstream f;
     f.open(path, std::ios::in);
     if (!f) {
@@ -16,7 +16,7 @@ void read_in_weigths_hwc(anydsl::Array<float>* buffer, int offset, std::string p
                 for (int y = 0; y < ksize; y++) {
                     int k_row = y * ksize * in_channels;
                     for (int x = 0; x < ksize; x++) {
-                        f >> buffer->data()[offset + k_nr + k_row + x * in_channels + j];
+                        f >> buffer[offset + k_nr + k_row + x * in_channels + j];
                     }
                 }
             }
@@ -24,7 +24,7 @@ void read_in_weigths_hwc(anydsl::Array<float>* buffer, int offset, std::string p
     }
 }
 
-void read_in_weigths_chw(anydsl::Array<float>* buffer, int offset, std::string path, int in_channels, int out_channels, int ksize) {
+void read_in_weigths_chw(float* buffer, int offset, std::string path, int in_channels, int out_channels, int ksize) {
     std::fstream f;
     f.open(path, std::ios::in);
     if (!f) {
@@ -36,7 +36,7 @@ void read_in_weigths_chw(anydsl::Array<float>* buffer, int offset, std::string p
                 for (int y = 0; y < ksize; y++) {
                     int k_row = y * ksize;
                     for (int x = 0; x < ksize; x++) {
-                        f >> buffer->data()[offset + k_nr + k_row + x + j * ksize * ksize];
+                        f >> buffer[offset + k_nr + k_row + x + j * ksize * ksize];
                     }
                 }
             }

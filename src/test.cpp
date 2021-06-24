@@ -10,7 +10,7 @@ void superres_conv_mat(std::string path);
 void superres_im2col(std::string path);
 
 int main() {
-    superres_im2col("/home/woshi/Documents/nneval/src/img_070.png");
+    superres_im2col("/home/woshi/Documents/nneval/src/orig.png");
     return 0;
 }
 
@@ -27,19 +27,19 @@ void im2col(std::string path) {
     anydsl::Array<float> weights(sizeof(float) * (memsize1 + memsize2 + memsize3 + memsize4 + memsize5 + memsize6 + memsize7));
 
     int offset = 0;
-    read_in_weigths_chw(&weights, offset, "/home/woshi/Documents/superres/src/network/conv1.txt",    3, 32, 5);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/conv1.txt",    3, 32, 5);
     offset += memsize1;
-    read_in_weigths_chw(&weights, offset, "/home/woshi/Documents/superres/src/network/conv2.txt",   32, 64, 3);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/conv2.txt",   32, 64, 3);
     offset += memsize2;
-    read_in_weigths_chw(&weights, offset, "/home/woshi/Documents/superres/src/network/conv3.txt",   64, 64, 3);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/conv3.txt",   64, 64, 3);
     offset += memsize3;
-    read_in_weigths_chw(&weights, offset, "/home/woshi/Documents/superres/src/network/upconv1.txt", 64, 32, 5);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/upconv1.txt", 64, 32, 5);
     offset += memsize4;
-    read_in_weigths_chw(&weights, offset, "/home/woshi/Documents/superres/src/network/conv4.txt",   32, 32, 3);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/conv4.txt",   32, 32, 3);
     offset += memsize5;
-    read_in_weigths_chw(&weights, offset, "/home/woshi/Documents/superres/src/network/conv5.txt",   32, 32, 3);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/conv5.txt",   32, 32, 3);
     offset += memsize6;
-    read_in_weigths_chw(&weights, offset, "/home/woshi/Documents/superres/src/network/conv6.txt",   32,  3, 3);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/conv6.txt",   32,  3, 3);
 
     ImageRgba32 img;
     load_png(FilePath(path), img);
@@ -77,19 +77,19 @@ void superres_im2col(std::string path) {
     float* biases = (float*) malloc(sizeof(float) * (memsize_biases));
 
     int offset = 0;
-    read_in_weigths_chw(&weights, offset, "/home/woshi/Documents/superres/src/network/conv1.txt",    3, 32, 5);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/conv1.txt",    3, 32, 5);
     offset += memsize1;
-    read_in_weigths_chw(&weights, offset, "/home/woshi/Documents/superres/src/network/conv2.txt",   32, 64, 3);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/conv2.txt",   32, 64, 3);
     offset += memsize2;
-    read_in_weigths_chw(&weights, offset, "/home/woshi/Documents/superres/src/network/conv3.txt",   64, 64, 3);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/conv3.txt",   64, 64, 3);
     offset += memsize3;
-    read_in_weigths_chw(&weights, offset, "/home/woshi/Documents/superres/src/network/upconv1.txt", 64, 32, 5);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/upconv1.txt", 64, 32, 5);
     offset += memsize4;
-    read_in_weigths_chw(&weights, offset, "/home/woshi/Documents/superres/src/network/conv4.txt",   32, 32, 3);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/conv4.txt",   32, 32, 3);
     offset += memsize5;
-    read_in_weigths_chw(&weights, offset, "/home/woshi/Documents/superres/src/network/conv5.txt",   32, 32, 3);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/conv5.txt",   32, 32, 3);
     offset += memsize6;
-    read_in_weigths_chw(&weights, offset, "/home/woshi/Documents/superres/src/network/conv6.txt",   32,  3, 3);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/conv6.txt",   32,  3, 3);
 
     read_in_biases(biases, 0                     , "/home/woshi/Documents/superres/src/network/c1bias.txt",  32);
     read_in_biases(biases, 32                    , "/home/woshi/Documents/superres/src/network/c2bias.txt",  64);
@@ -135,19 +135,19 @@ void superres_conv_mat(std::string path) {
     float* biases = (float*) malloc(sizeof(float) * (32 + 64 + 64 + 32 + 32 + 32));
 
     int offset = 0;
-    read_in_weigths_hwc(&weights, offset, "/home/woshi/Documents/superres/src/network/conv1.txt",    3, 32, 5);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/conv1.txt",    3, 32, 5);
     offset += memsize1;
-    read_in_weigths_hwc(&weights, offset, "/home/woshi/Documents/superres/src/network/conv2.txt",   32, 64, 3);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/conv2.txt",   32, 64, 3);
     offset += memsize2;
-    read_in_weigths_hwc(&weights, offset, "/home/woshi/Documents/superres/src/network/conv3.txt",   64, 64, 3);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/conv3.txt",   64, 64, 3);
     offset += memsize3;
-    read_in_weigths_hwc(&weights, offset, "/home/woshi/Documents/superres/src/network/upconv1.txt", 64, 32, 5);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/upconv1.txt", 64, 32, 5);
     offset += memsize4;
-    read_in_weigths_hwc(&weights, offset, "/home/woshi/Documents/superres/src/network/conv4.txt",   32, 32, 3);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/conv4.txt",   32, 32, 3);
     offset += memsize5;
-    read_in_weigths_hwc(&weights, offset, "/home/woshi/Documents/superres/src/network/conv5.txt",   32, 32, 3);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/conv5.txt",   32, 32, 3);
     offset += memsize6;
-    read_in_weigths_hwc(&weights, offset, "/home/woshi/Documents/superres/src/network/conv6.txt",   32,  3, 3);
+    read_in_weigths_chw(weights.data(), offset, "/home/woshi/Documents/superres/src/network/conv6.txt",   32,  3, 3);
 
     read_in_biases(biases, 0                     , "/home/woshi/Documents/superres/src/network/c1bias.txt",  32);
     read_in_biases(biases, 32                    , "/home/woshi/Documents/superres/src/network/c2bias.txt",  64);
