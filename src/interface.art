@@ -38,7 +38,7 @@ fn @im2col_test(img_buf: &Buffer, width: i32, height: i32, kernels: &Buffer, out
     let img_mat = make_matrix_from_image(img, mem, 0);
     make_image_from_matrix(img_mat, *out_buf);
 
-    im2col(kernel.cols, img_mat, 1, mem, 0);
+    im2col(kernel.cols, img_mat.cols, img_mat.rows, img_mat.cols, img_mat.rows, img_mat.channels, get_mat_acc(img_mat), 1, mem, 0);
 }
 
 #[export]
