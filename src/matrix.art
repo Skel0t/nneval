@@ -77,8 +77,8 @@ fn @get_mat_acc(m: Matrix) -> AccM {
 
 fn @get_cat_mat_acc(acc1: AccM, acc2: AccM, channels1: i32) -> AccM {
     AccM {
-        read  = @|row, col, chn|      { if chn < channels1 { acc1.read(row, col, chn) } else { acc2.read(row, col, chn) } },
-        write = @|row, col, chn, val| { if chn < channels1 { acc1.write(row, col, chn - channels1, val); } else { acc2.write(row, col, chn - channels1, val); } }
+        read  = @|row, col, chn|      { if chn < channels1 { acc1.read(row, col, chn)        } else { acc2.read(row, col, chn - channels1) } },
+        write = @|row, col, chn, val| { if chn < channels1 { acc1.write(row, col, chn, val); } else { acc2.write(row, col, chn - channels1, val); } }
     }
 }
 

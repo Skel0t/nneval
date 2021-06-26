@@ -27,6 +27,20 @@ fn @sres_conv_mat(img_buf: &Buffer, width: i32, height: i32, out_buf: &Buffer, k
     release(mem);
 }
 
+#[export]
+fn @denoise_im2col(img_buf: &Buffer, alb_buf: &Buffer, nrm_buf: &Buffer, width: i32, height: i32, out_buf: &Buffer, kernels: &Buffer, biases: &[f32]) -> () {
+    let img = make_image(*img_buf, width, height);
+    let alb = make_image(*alb_buf, width, height);
+    let nrm = make_image(*nrm_buf, width, height);
+
+    let nn = make_denoise_nn(*kernels, biases, width, height);
+    let mem = alloc(0, nn.necess_mem);
+
+    print_string("Memory in artic:\t"); print_i64(nn.necess_mem); print_string("\n");
+
+    nn.forward(img, alb, nrm, mem, *out_buf);
+    release(mem);
+}
 
 #[export]
 fn @im2col_test(img_buf: &Buffer, width: i32, height: i32, kernels: &Buffer, out_buf: &Buffer) -> () {
