@@ -44,6 +44,23 @@ void read_in_weigths_chw(float* buffer, int offset, std::string path, int in_cha
     }
 }
 
+void read_in_matrix_chw(float* buffer, std::string path, int channels, int rows, int cols) {
+    std::fstream f;
+    f.open(path, std::ios::in);
+    if (!f) {
+        std::cout << "Couldn't open " << path << std::endl;
+    } else {
+        for (int chn = 0; chn < channels; chn++) {
+            int chn_off = chn * rows * cols;
+            for (int row = 0; row < rows; row++) {
+                for (int col = 0; col < cols; col++) {
+                    f >> buffer[chn_off + row * cols + col];
+                }
+            }
+        }
+    }
+}
+
 void read_in_biases(float* buffer, int offset, std::string path, int out_channels) {
     std::fstream f;
     f.open(path, std::ios::in);

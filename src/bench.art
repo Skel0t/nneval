@@ -1,0 +1,126 @@
+#[export]
+fn @conv_bench(in_mat: &Buffer, flattened_kernels: &Buffer, biases: &[f32], out: & Buffer) -> () {
+    let height = 540;
+    let width  = 960;
+    let ksize = 5;
+    let in_channels = 64;
+    let out_channels = 32;
+
+    let size_im2col  = (ksize as i64) * (ksize as i64) * (in_channels as i64) * (width as i64) * (height as i64);  // size for im2col matrix
+
+    let mat = make_matrix(*in_mat, 0, MemoryFormat::CHW, in_channels, height, width);
+    let kernel = make_matrix(*flattened_kernels, 0, MemoryFormat::CHW, 1, out_channels, ksize * ksize * in_channels);
+    let biases_ho = @|i: i32| { biases(i) };
+
+    conv_with_im2col(ksize, out_channels, kernel, biases_ho, mat, true, *out, 0, size_im2col);
+}
+
+fn @conv_with_im2col(ksize: i32, out_channels: i32, flattened_kernels: Matrix, biases: fn(i32) -> f32, img_mat: Matrix, use_bias: bool, buf: Buffer, off: i64, off_res: i64) -> Matrix {
+    // insize == outsize if padding == ksize / 2.0 - 1
+    let padding    = ksize / 2;
+    let out_width  = (img_mat.cols + 2 * padding - ksize) + 1;
+    let out_height = (img_mat.rows + 2 * padding - ksize) + 1;
+
+    let im2col_mat = im2col(ksize, out_width, out_height, img_mat.cols, img_mat.rows, img_mat.channels, get_mat_acc(img_mat), padding, buf, off);
+    let prod       = matmul(flattened_kernels, im2col_mat, buf, off_res);
+
+    if use_bias {
+        for acc, v, row, col, chn in iterate_matrix_par(prod) {
+            acc.write(row, col, chn, v + biases(row));  // 1 channel per row
+        }
+    }
+
+    make_matrix(buf, off_res, MemoryFormat::CHW, out_channels, out_height, out_width)
+}
+
+// TODO: Block this too
+fn @im2col(ksize: i32, out_width: i32, out_height: i32, in_width: i32, in_height: i32, channels: i32, img_acc: AccM, padding: i32, buf: Buffer, off: i64) -> Matrix {
+    let img_s    = (out_width as i64) * (out_height as i64);
+    let ksize_sq = (ksize as i64) * (ksize as i64);
+
+    let bc = bitcast[&mut[f32]](buf.data);
+
+    let res_mat = make_matrix(buf, off, MemoryFormat::CHW, 1, channels * ksize_sq as i32, img_s as i32);
+
+    for chn in parallel(0, 0, channels) {
+        for base_col in range(0, img_s as i32) {
+            let mut base_row = (chn as i64) * (img_s * ksize_sq);
+
+            let row = base_col / out_width;
+            let col = base_col % out_width;
+
+            let p_row = row - padding;
+            let p_col = col - padding;
+
+            for y in unroll(0, ksize) {
+                for x in unroll(0, ksize) {
+                    let h = p_row + y;
+                    let w = p_col + x;
+
+                    if h < 0 || w < 0 || h >= in_height || w >= in_width {
+                        bc(off + base_row + (base_col as i64)) = 0;
+                    } else {
+                        bc(off + base_row + (base_col as i64)) = img_acc.read(h, w, chn);
+                    }
+
+                    base_row += img_s;
+                }
+            }
+
+        }
+    }
+
+    res_mat
+}
+
+// Image dimensions must be divisible by 2. Need to fix if not the case.
+fn @matmul(a: Matrix, b: Matrix, buf: Buffer, off: i64) -> Matrix {
+    let m = make_matrix(buf, off, MemoryFormat::HWC, 1, a.rows, b.cols);
+    let a_acc = get_mat_acc(a);
+    let b_acc = get_mat_acc(b);
+    let m_acc = get_mat_acc(m);
+
+    let mut m00 : f32;
+    let mut m01 : f32;
+    let mut m10 : f32;
+    let mut m11 : f32;
+
+    let c_size = 32;
+    let i_size = 8;
+
+    for cc in range_step(0, m.cols, c_size) {
+        for ii in range_step(0, a.cols, i_size) {
+            for r in range_step(0, m.rows, 2) {
+                for c in range_step(cc, cc + c_size, 2) {
+                    if c < m.cols {
+                        if ii == 0 {
+                            m00 = 0;
+                            m01 = 0;
+                            m10 = 0;
+                            m11 = 0;
+                        } else {
+                            m00 = m_acc.read(r  , c  , 0);
+                            m01 = m_acc.read(r  , c+1, 0);
+                            m10 = m_acc.read(r+1, c  , 0);
+                            m11 = m_acc.read(r+1, c+1, 0);
+                        }
+                        for i in range(ii, ii + i_size) {
+                            if i < a.cols {
+                                m00 += a_acc.read(r  , i, 0) * b_acc.read(i, c  , 0);
+                                m01 += a_acc.read(r  , i, 0) * b_acc.read(i, c+1, 0);
+                                m10 += a_acc.read(r+1, i, 0) * b_acc.read(i, c  , 0);
+                                m11 += a_acc.read(r+1, i, 0) * b_acc.read(i, c+1, 0);
+                            }
+                        }
+                        m_acc.write(r  , c,   0, m00);
+                        m_acc.write(r  , c+1, 0, m01);
+                        m_acc.write(r+1, c  , 0, m10);
+                        m_acc.write(r+1, c+1, 0, m11);
+                    }
+                }
+            }
+        }
+    }
+
+    m
+}

@@ -82,20 +82,6 @@ fn @get_cat_mat_acc(acc1: AccM, acc2: AccM, channels1: i32) -> AccM {
     }
 }
 
-fn @matmul(a: Matrix, b: Matrix, buf: Buffer, off: i64) -> Matrix {
-    let m = make_matrix(buf, off, MemoryFormat::HWC, 1, a.rows, b.cols);
-    let a_acc = get_mat_acc(a);
-    let b_acc = get_mat_acc(b);
-
-    for m_acc, _v, r, c, chn in iterate_matrix_par(m) {
-        m_acc.write(r, c, chn, 0);
-        for i in range(0, a.cols) {
-            m_acc.write(r, c, chn, m_acc.read(r, c, chn) + a_acc.read(r, i, chn) * b_acc.read(i, c, chn));
-        }
-    }
-    m
-}
-
 // Need to have same channel format
 fn @mkl_matmul(a: Matrix, b: Matrix, buf: Buffer, off: i64) {
     let c = make_matrix(buf, off, MemoryFormat::HWC, 1, a.rows, b.cols);
@@ -140,3 +126,6 @@ fn @mkl_add_element_wise(a: Matrix, b: Matrix, buf: Buffer, off: i64) -> Matrix 
                                    bitcast[&mut[f32]](&(c.buf.data(4 * c.offset))));
     c
 }
+
+// nearest multiple of num
+fn @round_up(num: i32, multiple: i32) -> i32 { ((num + multiple - 1) / multiple) }

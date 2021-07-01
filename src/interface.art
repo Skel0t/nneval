@@ -2,7 +2,7 @@
 #[import(cc = "C")] fn mkl_add_constant(_n: i32, _a: &[f32], _val: f32, _res: &mut[f32]) -> ();
 #[import(cc = "C")] fn mkl_add_elemwise(_n: i32, _a: &[f32], _b: &[f32], _c: &mut[f32]) -> ();
 #[import(cc = "C")] fn mkl_apply_relu(_n: i32, _a: &[f32], _c: &mut[f32]) -> ();
-
+/*
 #[export]
 fn @sres_im2col(img_buf: &Buffer, width: i32, height: i32, out_buf: &Buffer, kernels: &Buffer, biases: &[f32]) -> () {
     let img = make_image(*img_buf, width, height);
@@ -102,3 +102,4 @@ fn @image_kernel_test(kernel: &Buffer, img_buf: &Buffer, out_buf: &Buffer) -> ()
 
     release(buffer);
 }
+*/

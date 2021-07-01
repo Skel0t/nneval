@@ -1,21 +1,82 @@
 #include <iostream>
+#include <chrono>
 
 #include "interface.h"
 #include "image.h"
 #include "nn.h"
-
+/*
 void imageTest();
 void im2col(std::string path);
 void superres_conv_mat(std::string path);
 void superres_im2col(std::string path);
 void denoise(std::string path1, std::string path2, std::string path3);
+*/
+void bench();
 
 int main() {
-    // superres_im2col("/home/woshi/Documents/nneval/src/65010.png");
-    denoise("/home/woshi/Documents/nneval/rendered.png", "/home/woshi/Documents/nneval/albedo.png", "/home/woshi/Documents/nneval/normal.png");
+    bench();
     return 0;
 }
 
+void bench() {
+    const int in_channels  = 64;
+    const int out_channels = 32;
+    const int ksize  = 5;
+    const int width  = 960;
+    const int height = 540;
+    const int memsize_weights = ksize * ksize * in_channels * out_channels;
+    const int memsize_biases  = out_channels;
+    const int size_im2col  = ksize * ksize  * in_channels * width * height;  // size for im2col matrix
+
+
+    // Buffer for all convolution weights
+    anydsl::Array<float> weights(sizeof(float) * (memsize_weights));
+
+    // Buffer for all convolution biases, one for each out_channel
+    float* biases = (float*) malloc(sizeof(float) * (memsize_biases));
+
+    // Buffer for in matrix
+    anydsl::Array<float> in_mat(sizeof(float) * width * height * in_channels);
+
+    // Buffer for out matrix
+    anydsl::Array<float> out_mat(sizeof(float) * (width * height * out_channels + size_im2col));
+
+    // Buffer for ref matrix
+    anydsl::Array<float> ref_mat(sizeof(float) * width * height * out_channels);
+
+    read_in_weigths_chw(weights.data(), 0, "../bench/upconv1.txt", 64, 32, 5);
+    read_in_biases(biases, 0, "../bench/uc1bias.txt", 32);
+    read_in_matrix_chw(in_mat.data(), "../bench/conv4_in.txt", in_channels, height, width);
+    read_in_matrix_chw(ref_mat.data(), "../bench/conv4_out.txt", out_channels, height, width);
+
+    auto ticks = std::chrono::high_resolution_clock::now();
+    conv_bench(&in_mat, &weights, biases, &out_mat);
+    auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - ticks).count();
+    std::cout << "Time:\t" << elapsed_ms << " ms" << std::endl;
+
+    for (size_t chn = 0; chn < out_channels; chn++) {
+        for (size_t row = 0; row < height; row++) {
+            for (size_t col = 0; col < width; col++) {
+                if (abs(out_mat.data()[size_im2col + chn * width * height + row * width + col] - ref_mat.data()[chn * width * height + row * width + col]) > 1.0e-4) {
+                    std::cout << "Diff at:\t" << chn << "\t" << width << "\t" << height << "\t(chn, x, y)" << std::endl;
+                    std::cout << "Was:\t\t" << out_mat.data()[size_im2col + chn * width * height + row * width + col] << "\n"
+                        << "Should be:\t" << ref_mat.data()[chn * width * height + row * width + col] << std::endl;
+                    goto outer_break;
+                }
+            }
+        }
+    }
+    std::cout << "Correct Calculation!" << std::endl;
+outer_break:
+
+    in_mat.release();
+    out_mat.release();
+    ref_mat.release();
+    weights.release();
+    free(biases);
+}
+
+/*
 void im2col(std::string path) {
     const int memsize1 = 5 * 5 *  3 * 32;
     const int memsize2 = 3 * 3 * 32 * 64;
@@ -303,3 +364,4 @@ void denoise(std::string path1, std::string path2, std::string path3) {
     result.release();
     free(biases);
 }
+*/
