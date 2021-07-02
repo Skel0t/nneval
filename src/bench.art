@@ -89,32 +89,58 @@ fn @matmul(a: Matrix, b: Matrix, buf: Buffer, off: i64) -> Matrix {
         for r in range(0, mat.rows) {
             vectorize(64, @|j| {
                 m(j) = 0;
-                for i in range(0, imin(0 + i_size, a.cols)) {
+                for i in unroll(0, i_size) {
                     m(j) += a_acc.read(r, i, 0) * b_acc.read(i, c + j, 0);
                 }
                 m_acc.write(r, c + j, 0, m(j));
             });
         }
-        for ii in range_step(i_size, a.cols, i_size) {
+
+        let i_vec_len = round_down(a.cols, i_size);
+
+        for ii in range_step(i_size, i_vec_len, i_size) {
             for r in range(0, mat.rows) {
                 vectorize(64, @|j| {
                     m(j) = m_acc.read(r, c + j, 0);
-                    for i in range(ii, imin(ii + i_size, a.cols)) {
+                    for i_loop in unroll(0, i_size) {
+                        let i = i_loop + ii;
                         m(j) += a_acc.read(r, i, 0) * b_acc.read(i, c + j, 0);
                     }
                     m_acc.write(r, c + j, 0, m(j));
                 });
             }
         }
+        for r in range(0, mat.rows) {
+            for c_inner in range(c, imin(c + c_size, mat.cols)) {
+                m(0) = m_acc.read(r, c_inner, 0);
+                for i in range(i_vec_len, a.cols) {
+                    m(0) += a_acc.read(r, i, 0) * b_acc.read(i, c_inner, 0);
+                }
+                m_acc.write(r, c_inner, 0, m(0));
+            }
+        }
     }
     for c in range(c_vec_len, mat.cols) {
-        for ii in range_step(0, a.cols, i_size) {
+
+        let i_vec_len = round_down(a.cols, i_size);
+
+        for ii in range_step(i_size, i_vec_len, i_size) {
             for r in range(0, mat.rows) {
                 m(0) = m_acc.read(r, c, 0);
-                for i in range(ii, imin(ii + i_size, a.cols)) {
+                for i_loop in unroll(0, i_size) {
+                    let i = i_loop + ii;
                     m(0) += a_acc.read(r, i, 0) * b_acc.read(i, c, 0);
                 }
                 m_acc.write(r, c, 0, m(0));
+            }
+        }
+        for r in range(0, mat.rows) {
+            for c_inner in range(c, imin(c + c_size, mat.cols)) {
+                m(0) = m_acc.read(r, c_inner, 0);
+                for i in range(i_vec_len, a.cols) {
+                    m(0) += a_acc.read(r, i, 0) * b_acc.read(i, c_inner, 0);
+                }
+                m_acc.write(r, c_inner, 0, m(0));
             }
         }
     }
