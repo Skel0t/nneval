@@ -83,32 +83,53 @@ fn @matmul(a: Matrix, b: Matrix, buf: Buffer, off: i64) -> Matrix {
 
     let mut m : [f32 * 64];
 
-    for cc in range_step(0, mat.cols, c_size) {
-        for ii in range_step(0, a.cols, i_size) {
-            for r in range_step(0, mat.rows, 1) {
+    let c_vec_len = round_down(mat.cols, c_size);
+
+    for c in range_step(0, c_vec_len, c_size) {
+        for r in range(0, mat.rows) {
+            vectorize(64, @|j| {
+                m(j) = 0;
+                for i in range(0, imin(0 + i_size, a.cols)) {
+                    m(j) += a_acc.read(r, i, 0) * b_acc.read(i, c + j, 0);
+                }
+                m_acc.write(r, c + j, 0, m(j));
+            });
+        }
+        for ii in range_step(i_size, a.cols, i_size) {
+            for r in range(0, mat.rows) {
                 vectorize(64, @|j| {
-                    let c = cc;
-                    if c < mat.cols {
-                        if ii == 0 {
-                            m(j) = 0;
-                        } else {
-                            m(j) = m_acc.read(r, c + j, 0);
-                        }
-                        for i in range(ii, ii + i_size) {
-                            if i < a.cols {
-                                m(j) += a_acc.read(r, i, 0) * b_acc.read(i, c + j, 0);
-                            } else {
-                                break()
-                            }
-                        }
-                        m_acc.write(r, c + j, 0, m(j));
+                    m(j) = m_acc.read(r, c + j, 0);
+                    for i in range(ii, imin(ii + i_size, a.cols)) {
+                        m(j) += a_acc.read(r, i, 0) * b_acc.read(i, c + j, 0);
                     }
+                    m_acc.write(r, c + j, 0, m(j));
                 });
+            }
+        }
+    }
+    for c in range(c_vec_len, mat.cols) {
+        for ii in range_step(0, a.cols, i_size) {
+            for r in range(0, mat.rows) {
+                if c < mat.cols {
+                    m(0) = m_acc.read(r, c, 0);
+                    for i in range(ii, imin(ii + i_size, a.cols)) {
+                        m(0) += a_acc.read(r, i, 0) * b_acc.read(i, c, 0);
+                    }
+                    m_acc.write(r, c, 0, m(0));
+                }
             }
         }
     }
 
     mat
+}
+
+fn @imin(a: i32, b: i32) -> i32 {
+    if a < b { a } else { b }
+}
+
+fn @round_down(n: i32, d: i32) -> i32 {
+    (n / d) * d
 }
 
 fn @parallel_step(body: fn(i32) -> ()) {
