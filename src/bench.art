@@ -110,13 +110,11 @@ fn @matmul(a: Matrix, b: Matrix, buf: Buffer, off: i64) -> Matrix {
     for c in range(c_vec_len, mat.cols) {
         for ii in range_step(0, a.cols, i_size) {
             for r in range(0, mat.rows) {
-                if c < mat.cols {
-                    m(0) = m_acc.read(r, c, 0);
-                    for i in range(ii, imin(ii + i_size, a.cols)) {
-                        m(0) += a_acc.read(r, i, 0) * b_acc.read(i, c, 0);
-                    }
-                    m_acc.write(r, c, 0, m(0));
+                m(0) = m_acc.read(r, c, 0);
+                for i in range(ii, imin(ii + i_size, a.cols)) {
+                    m(0) += a_acc.read(r, i, 0) * b_acc.read(i, c, 0);
                 }
+                m_acc.write(r, c, 0, m(0));
             }
         }
     }
