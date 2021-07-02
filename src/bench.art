@@ -43,84 +43,83 @@ fn @im2col(ksize: i32, out_width: i32, out_height: i32, in_width: i32, in_height
     let res_mat = make_matrix(buf, off, MemoryFormat::CHW, 1, channels * ksize_sq as i32, img_s as i32);
 
     for chn in parallel(0, 0, channels) {
-        for base_col in range(0, img_s as i32) {
-            let mut base_row = (chn as i64) * (img_s * ksize_sq);
+        for r in range(0, out_height) {
+            for c in range(0, out_width) {
+                let mut base_row = (chn as i64) * (img_s * ksize_sq);
+                let     base_col = r * out_width + c;
 
-            let row = base_col / out_width;
-            let col = base_col % out_width;
+                let p_row = r - padding;
+                let p_col = c - padding;
 
-            let p_row = row - padding;
-            let p_col = col - padding;
+                for y in unroll(0, ksize) {
+                    for x in unroll(0, ksize) {
+                        let h = p_row + y;
+                        let w = p_col + x;
 
-            for y in unroll(0, ksize) {
-                for x in unroll(0, ksize) {
-                    let h = p_row + y;
-                    let w = p_col + x;
+                        if h < 0 || w < 0 || h >= in_height || w >= in_width {
+                            bc(off + base_row + (base_col as i64)) = 0;
+                        } else {
+                            bc(off + base_row + (base_col as i64)) = img_acc.read(h, w, chn);
+                        }
 
-                    if h < 0 || w < 0 || h >= in_height || w >= in_width {
-                        bc(off + base_row + (base_col as i64)) = 0;
-                    } else {
-                        bc(off + base_row + (base_col as i64)) = img_acc.read(h, w, chn);
+                        base_row += img_s;
                     }
-
-                    base_row += img_s;
                 }
             }
-
         }
     }
 
     res_mat
 }
 
-// Image dimensions must be divisible by 2. Need to fix if not the case.
+// Image dimensions must be divisible by 2. Need to fix if not the case. -> Saves ~200ms on my machine
 fn @matmul(a: Matrix, b: Matrix, buf: Buffer, off: i64) -> Matrix {
-    let m = make_matrix(buf, off, MemoryFormat::HWC, 1, a.rows, b.cols);
+    let mat = make_matrix(buf, off, MemoryFormat::HWC, 1, a.rows, b.cols);
     let a_acc = get_mat_acc(a);
     let b_acc = get_mat_acc(b);
-    let m_acc = get_mat_acc(m);
+    let m_acc = get_mat_acc(mat);
 
-    let mut m00 : f32;
-    let mut m01 : f32;
-    let mut m10 : f32;
-    let mut m11 : f32;
+    let c_size = 64;
+    let i_size = 16;
 
-    let c_size = 32;
-    let i_size = 8;
+    let mut m : [f32 * 64];
 
-    for cc in range_step(0, m.cols, c_size) {
+    for cc in range_step(0, mat.cols, c_size) {
         for ii in range_step(0, a.cols, i_size) {
-            for r in range_step(0, m.rows, 2) {
-                for c in range_step(cc, cc + c_size, 2) {
-                    if c < m.cols {
+            for r in range_step(0, mat.rows, 1) {
+                vectorize(64, @|j| {
+                    let c = cc;
+                    if c < mat.cols {
                         if ii == 0 {
-                            m00 = 0;
-                            m01 = 0;
-                            m10 = 0;
-                            m11 = 0;
+                            m(j) = 0;
                         } else {
-                            m00 = m_acc.read(r  , c  , 0);
-                            m01 = m_acc.read(r  , c+1, 0);
-                            m10 = m_acc.read(r+1, c  , 0);
-                            m11 = m_acc.read(r+1, c+1, 0);
+                            m(j) = m_acc.read(r, c + j, 0);
                         }
                         for i in range(ii, ii + i_size) {
                             if i < a.cols {
-                                m00 += a_acc.read(r  , i, 0) * b_acc.read(i, c  , 0);
-                                m01 += a_acc.read(r  , i, 0) * b_acc.read(i, c+1, 0);
-                                m10 += a_acc.read(r+1, i, 0) * b_acc.read(i, c  , 0);
-                                m11 += a_acc.read(r+1, i, 0) * b_acc.read(i, c+1, 0);
+                                m(j) += a_acc.read(r, i, 0) * b_acc.read(i, c + j, 0);
+                            } else {
+                                break()
                             }
                         }
-                        m_acc.write(r  , c,   0, m00);
-                        m_acc.write(r  , c+1, 0, m01);
-                        m_acc.write(r+1, c  , 0, m10);
-                        m_acc.write(r+1, c+1, 0, m11);
+                        m_acc.write(r, c + j, 0, m(j));
                     }
-                }
+                });
             }
         }
     }
 
-    m
+    mat
+}
+
+fn @parallel_step(body: fn(i32) -> ()) {
+	fn @loop(threads: i32, start: i32, stop: i32, step: i32) -> () {
+		let iterations = (stop - start + step - 1) / step;
+        let intern_stop = start + iterations * step;
+        for cur in parallel(threads, start, intern_stop) {
+            @body(cur * step);
+        }
+	}
+
+	loop
 }
